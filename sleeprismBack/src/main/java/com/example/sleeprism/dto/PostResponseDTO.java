@@ -24,8 +24,11 @@ public class PostResponseDTO {
   private int viewCount;
   private boolean isDeleted;
   private String authorNickname; // 작성자 닉네임 (User 엔티티의 username 필드와 매핑)
+  private Long originalAuthorId;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
+  private boolean isSellable;
+  private boolean isSold;
 
   /**
    * Post 엔티티를 기반으로 PostResponseDTO 객체를 생성하는 생성자입니다.
@@ -40,7 +43,10 @@ public class PostResponseDTO {
     this.viewCount = post.getViewCount();
     this.isDeleted = post.isDeleted();
     this.authorNickname = post.getOriginalAuthor().getUsername();
+    this.originalAuthorId = post.getOriginalAuthor().getId();
     this.createdAt = post.getCreatedAt();
     this.updatedAt = post.getUpdatedAt();
+    this.isSellable = post.isSellable();
+    this.isSold = post.isSold();
   }
 }

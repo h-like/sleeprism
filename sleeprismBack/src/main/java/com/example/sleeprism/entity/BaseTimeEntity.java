@@ -15,10 +15,12 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class) // JPA Auditing 기능 사용하여 생성/수정 시간을 자동으로 관리
 public abstract class BaseTimeEntity {
 
-  @CreatedDate
-  @Column(updatable = false)
+  @CreatedDate // 엔티티가 생성될 때 시간이 자동 저장됩니다.
+  @Column(updatable = false, nullable = false) // 생성 시간은 업데이트되지 않으며, null을 허용하지 않습니다.
   private LocalDateTime createdAt;
 
-  @LastModifiedDate
+  @LastModifiedDate // 엔티티가 수정될 때 시간이 자동 저장됩니다.
+  @Column(nullable = false) // 수정 시간은 null을 허용하지 않습니다.
   private LocalDateTime updatedAt;
+
 }
