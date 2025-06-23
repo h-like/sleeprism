@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -51,6 +52,7 @@ public class DreamInterpretation extends BaseTimeEntity {
   @JoinColumn(name = "selected_tarot_card_id") // 사용자가 선택한 타로 카드
   private TarotCard selectedTarotCard;
 
+  @CreationTimestamp
   @Column(name = "interpreted_at", nullable = false)
   private LocalDateTime interpretedAt; // 해몽이 요청되어 생성된 시간
 
