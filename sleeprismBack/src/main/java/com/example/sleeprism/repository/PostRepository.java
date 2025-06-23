@@ -13,7 +13,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
   // JpaRepository<엔티티 타입, 엔티티의 ID 타입>
 
   // 1. 특정 사용자가 작성한 게시글을 최신순으로 조회 (삭제되지 않은 게시글만)
-  List<Post> findByUser_IdAndIsDeletedFalseOrderByCreatedAtDesc(Long userId);
+  List<Post> findByOriginalAuthor_IdAndIsDeletedFalseOrderByCreatedAtDesc(Long userId); // <-- 이 부분을 수정!
 
   // 2. 제목 또는 내용으로 게시글 검색 (삭제되지 않은 게시글만)
   // 네이티브 쿼리를 사용하여 데이터베이스 SQL 함수를 직접 호출
@@ -44,11 +44,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
   List<Post> findTopNByLikes(org.springframework.data.domain.Pageable pageable);
 
   // 7. 특정 유저가 작성한, 삭제되지 않은 게시글의 개수
-  long countByUser_IdAndIsDeletedFalse(Long userId);
+  long countByOriginalAuthor_IdAndIsDeletedFalse(Long userId); // <-- 이 부분을 수정!
 
   // 8. 특정 카테고리의 삭제되지 않은 게시글 개수
   long countByCategoryAndIsDeletedFalse(PostCategory category);
 
   // 9. 모든 삭제되지 않은 게시글을 최신순으로 조회
   List<Post> findByIsDeletedFalseOrderByCreatedAtDesc();
+
+  // 10. 현재 소유자()로 게시글 조회 메서드 현재 소유자(currentOwner)로 게시글 조회 메서드
+  List<Post> findByCurrentOwner_IdAndIsDeletedFalseOrderByCreatedAtDesc(Long userId); // <-- 이 부분을 추가!
 }

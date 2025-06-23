@@ -39,8 +39,7 @@ public class PostResponseDTO {
     this.category = post.getCategory();
     this.viewCount = post.getViewCount();
     this.isDeleted = post.isDeleted();
-    // User 엔티티의 'username' 필드를 작성자 닉네임으로 사용합니다.
-    this.authorNickname = post.getUser().getUsername();
+    this.authorNickname = post.getOriginalAuthor().getUsername();
     this.createdAt = post.getCreatedAt();
     this.updatedAt = post.getUpdatedAt();
   }

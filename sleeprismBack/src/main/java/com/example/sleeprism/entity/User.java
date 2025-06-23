@@ -64,8 +64,13 @@ public class User extends BaseTimeEntity implements UserDetails { // BaseTimeEnt
   private boolean isDeleted = false; // 사용자 삭제 여부를 나타냅니다. 기본값은 false입니다.
 
   // 연관관계 매핑: User와 Post는 1:N 관계입니다.
-  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy = "originalAuthor", cascade = CascadeType.ALL, orphanRemoval = true) // Post 엔티티의 필드명 변경에 맞춰 'user' -> 'originalAuthor'로 변경
   private List<Post> posts = new ArrayList<>();
+
+  // **추가: 구매/소유한 게시물 목록**
+  @OneToMany(mappedBy = "currentOwner", cascade = CascadeType.ALL) // 소유권은 삭제해도 원본 포스트는 유지되어야 하므로 orphanRemoval = true는 적절치 않음.
+  private List<Post> ownedPosts = new ArrayList<>(); // 현재 사용자가 소유한 게시물 목록
+
 
   // 연관관계 매핑: User와 Comment는 1:N 관계입니다.
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

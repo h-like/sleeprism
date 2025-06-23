@@ -42,6 +42,13 @@ public class Comment extends BaseTimeEntity{
   @Column(name = "is_deleted", nullable = false)
   private boolean isDeleted = false;
 
+  // **추가: 댓글에 첨부되는 단일 이미지/GIF 관련 필드**
+  @Column(name = "attachment_url", length = 255)
+  private String attachmentUrl; // 첨부 파일의 URL (S3, CDN 등)
+
+  @Column(name = "attachment_type", length = 50)
+  private String attachmentType; // 첨부 파일의 MIME 타입 (image/jpeg, image/gif 등)
+
   // 연관관계 편의 메소드
   public void setPost(Post post) {
     this.post = post;
@@ -65,22 +72,29 @@ public class Comment extends BaseTimeEntity{
   }
 
   @Builder
-  public Comment(Post post, User user, String content, Comment parent) {
+  public Comment(Post post, User user, String content, Comment parent, String attachmentUrl, String attachmentType) {
     this.post = post;
     this.user = user;
     this.content = content;
     this.parent = parent;
     this.isDeleted = false;
+    this.attachmentUrl = attachmentUrl; // 추가
+    this.attachmentType = attachmentType; // 추가
   }
 
   public void delete() {
     this.isDeleted = true;
   }
 
-  public void update(String content) {
+  public void update(String content, String attachmentUrl, String attachmentType) {
     this.content = content;
+    this.attachmentUrl = attachmentUrl; // 추가
+    this.attachmentType = attachmentType; // 추가
+  }
+
+  // **추가: 첨부 파일 제거 메서드 (옵션)**
+  public void removeAttachment() {
+    this.attachmentUrl = null;
+    this.attachmentType = null;
   }
 }
-
-
-

@@ -1,4 +1,3 @@
-// src/main/java/com/example/sleeprism/security/SecurityConfig.java
 package com.example.sleeprism.security;
 
 import com.example.sleeprism.jwt.JwtAuthenticationFilter;
@@ -104,16 +103,25 @@ public class SecurityConfig {
         // HTTP 요청에 대한 권한 부여 규칙을 정의합니다.
         .authorizeHttpRequests(authorize -> authorize
             // 다음 경로들은 인증 없이도 접근을 허용합니다.
-            // "/" : 애플리케이션의 루트 경로 (컨텍스트 경로가 있는 경우, 내부적으로 /sleeprism/가 /로 매핑됨)
-            // "/sleeprism/**" : 컨텍스트 경로를 포함한 모든 하위 경로 (정적 자원 및 기본 페이지)
-            // "/error" : Spring Boot의 기본 에러 페이지
-            // "/api/auth/**" : 인증 관련 API (로그인, 회원가입)
-            // "/api/files/**" : 파일 업로드/다운로드 API
-            // "/oauth2/**", "/login/**" : OAuth2 로그인 관련 경로
-            .requestMatchers("/", "/sleeprism/**", "/error", "/api/auth/**", "/api/files/**", "/oauth2/**", "/login/**").permitAll()
+            .requestMatchers(
+                "/",
+                "/sleeprism/**", // 컨텍스트 경로를 포함한 모든 하위 경로
+                "/error",
+                "/api/auth/**", // 인증 관련 API (로그인, 회원가입)
+                "/api/files/**", // 일반 파일 업로드/다운로드 API (Postman의 FileController)
+                "/api/users/signup", // 회원가입
+                "/api/users/signin", // 로그인 (POST)
+                "/oauth2/**", // OAuth2 로그인 관련 경로
+                "/login/**",  // OAuth2 로그인 관련 경로
+                // 게시글 첨부 파일 제공 URL은 인증 없이 접근 허용 (이미지 로딩 등)
+                "/api/posts/files/**" // <-- 오타 수정 및 public으로 변경
+            ).permitAll()
             // "/admin/**" 경로에는 "ADMIN" 역할을 가진 사용자만 접근을 허용합니다.
             .requestMatchers("/admin/**").hasRole("ADMIN")
             // 나머지 모든 요청은 인증된 사용자만 접근을 허용합니다.
+            // 여기에는 게시글 생성/수정/삭제 (/api/posts, /api/posts/{postId} PUT/DELETE)
+            // 게시글 조회 (/api/posts, /api/posts/{postId} GET, /api/posts/category/{category} GET) 등
+            // 인증이 필요한 API가 포함됩니다.
             .anyRequest().authenticated()
         )
         // 예외 처리를 설정합니다.

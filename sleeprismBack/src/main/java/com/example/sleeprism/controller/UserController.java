@@ -1,9 +1,6 @@
 package com.example.sleeprism.controller;
 
-import com.example.sleeprism.dto.UserProfileUpdateRequestDTO;
-import com.example.sleeprism.dto.UserResponseDTO;
-import com.example.sleeprism.dto.UserSignInRequestDTO;
-import com.example.sleeprism.dto.UserSignUpRequestDTO;
+import com.example.sleeprism.dto.*;
 import com.example.sleeprism.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -33,17 +30,16 @@ public class UserController {
   // 일반 로그인 (Spring Security와 연동)
   // 실제로는 Spring Security의 UsernamePasswordAuthenticationFilter 등이 이 역할을 대신합니다.
   // 여기서는 간단한 테스트용으로만 사용하거나, 로그인 로그를 남기는 용도로 활용됩니다.
-  @PostMapping("/signin")
-  public ResponseEntity<UserResponseDTO> signIn(
-      @Valid @RequestBody UserSignInRequestDTO requestDto,
-      HttpServletRequest request // IP 주소 획득
+  @PostMapping("/signin") // GET -> POST로 변경
+  public ResponseEntity<AuthResponseDTO> signIn( // UserResponseDTO -> AuthResponseDTO로 반환 타입 변경
+                                                 @Valid @RequestBody UserSignInRequestDTO requestDto,
+                                                 HttpServletRequest request
   ) {
-    String ipAddress = request.getRemoteAddr(); // 클라이언트 IP 주소 획득
-    // 실제 로그인 처리 후 JWT 토큰 등을 반환해야 합니다.
-    // 여기서는 예시로 사용자 정보를 반환합니다.
-    UserResponseDTO responseDto = userService.signIn(requestDto, ipAddress);
+    String ipAddress = request.getRemoteAddr();
+    AuthResponseDTO responseDto = userService.signIn(requestDto, ipAddress); // AuthResponseDTO 반환
     return ResponseEntity.ok(responseDto);
   }
+
 
   // 사용자 프로필 조회 (인증된 사용자만 접근 가능)
   @GetMapping("/profile")

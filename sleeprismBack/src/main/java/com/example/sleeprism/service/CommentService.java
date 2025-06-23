@@ -1,0 +1,171 @@
+package com.example.sleeprism.service;
+
+import com.example.sleeprism.dto.CommentCreateRequestDTO;
+import com.example.sleeprism.dto.CommentResponseDTO;
+import com.example.sleeprism.dto.CommentUpdateRequestDTO;
+import com.example.sleeprism.entity.Comment;
+import com.example.sleeprism.entity.Post;
+import com.example.sleeprism.entity.User;
+import com.example.sleeprism.repository.CommentRepository;
+import com.example.sleeprism.repository.PostRepository;
+import com.example.sleeprism.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class CommentService {
+
+  private final CommentRepository commentRepository;
+  private final PostRepository postRepository;
+  private final UserRepository userRepository;
+  private final FileStorageService fileStorageService; // 첨부 파일 관리를 위해 추가
+
+  /**
+   * 댓글을 생성합니다. (최상위 댓글 또는 대댓글)
+   * @param requestDto 댓글 생성 요청 DTO
+   * @param userId 댓글 작성자 ID
+   * @return 생성된 댓글 응답 DTO
+   */
+  @Transactional
+  public CommentResponseDTO createComment(CommentCreateRequestDTO requestDto, Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+    Post post = postRepository.findByIdAndIsDeletedFalse(requestDto.getPostId())
+        .orElseThrow(() -> new EntityNotFoundException("Post not found or deleted with ID: " + requestDto.getPostId()));
+
+    Comment parentComment = null;
+    if (requestDto.getParentCommentId() != null) {
+      parentComment = commentRepository.findByIdAndIsDeletedFalse(requestDto.getParentCommentId())
+          .orElseThrow(() -> new EntityNotFoundException("Parent comment not found or deleted with ID: " + requestDto.getParentCommentId()));
+
+      // 대댓글 1단계만 허용: 부모 댓글이 이미 부모를 가지고 있다면 (즉, 2단계 대댓글) 생성 불가
+      if (parentComment.getParent() != null) {
+        throw new IllegalArgumentException("댓글은 1단계 대댓글까지만 허용됩니다.");
+      }
+    }
+
+    Comment comment = Comment.builder()
+        .post(post)
+        .user(user)
+        .content(requestDto.getContent())
+        .parent(parentComment)
+        .attachmentUrl(requestDto.getAttachmentUrl()) // 첨부 파일 URL
+        .attachmentType(requestDto.getAttachmentType()) // 첨부 파일 타입
+        .build();
+
+    // 양방향 관계 설정 (Post, User, ParentComment)
+    comment.setPost(post);
+    comment.setUser(user);
+    if (parentComment != null) {
+      comment.setParent(parentComment);
+    }
+
+    Comment savedComment = commentRepository.save(comment);
+    return new CommentResponseDTO(savedComment);
+  }
+
+  /**
+   * 특정 게시글의 모든 댓글(최상위 및 대댓글 포함)을 조회합니다.
+   * @param postId 게시글 ID
+   * @return 댓글 목록 DTO
+   */
+  public List<CommentResponseDTO> getCommentsByPostId(Long postId) {
+    // 최상위 댓글만 조회하고, @OneToMany 관계를 통해 대댓글들이 N+1 문제 없이 로드되도록 Fetch Join 또는 BatchSize 설정 필요
+    // (현재는 Comment 엔티티의 fetch type이 LAZY이므로, N+1 문제가 발생할 수 있습니다.
+    // 이를 해결하려면 JPQL @Query를 사용하거나 application.yml에 default-batch-fetch-size 설정)
+    List<Comment> topLevelComments = commentRepository.findByPost_IdAndParentIsNullAndIsDeletedFalseOrderByCreatedAtDesc(postId);
+    return topLevelComments.stream()
+        .map(comment -> new CommentResponseDTO(comment, false)) // 삭제된 댓글 내용은 숨김
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * 특정 댓글을 수정합니다.
+   * @param commentId 수정할 댓글 ID
+   * @param requestDto 댓글 수정 요청 DTO
+   * @param userId 댓글 작성자 ID (권한 검증용)
+   * @return 수정된 댓글 응답 DTO
+   */
+  @Transactional
+  public CommentResponseDTO updateComment(Long commentId, CommentUpdateRequestDTO requestDto, Long userId) {
+    Comment comment = commentRepository.findByIdAndIsDeletedFalse(commentId)
+        .orElseThrow(() -> new EntityNotFoundException("Comment not found or deleted with ID: " + commentId));
+
+    // 작성자만 수정 가능
+    if (!comment.getUser().getId().equals(userId)) {
+      throw new IllegalArgumentException("You do not have permission to update this comment.");
+    }
+
+    String updatedAttachmentUrl = requestDto.getAttachmentUrl();
+    String updatedAttachmentType = requestDto.getAttachmentType();
+
+    // 기존 첨부 파일 제거 요청이 있을 경우
+    if (requestDto.isRemoveAttachment() && comment.getAttachmentUrl() != null) {
+      fileStorageService.deleteFile(comment.getAttachmentUrl()); // 실제 파일 삭제
+      updatedAttachmentUrl = null;
+      updatedAttachmentType = null;
+    }
+    // 새 첨부 파일이 있고 기존 파일 제거 요청이 없다면 (혹은 기존 파일이 없다면)
+    else if (requestDto.getAttachmentUrl() != null && !requestDto.getAttachmentUrl().isEmpty()) {
+      // 기존 파일이 있다면 삭제 (새 파일로 교체)
+      if (comment.getAttachmentUrl() != null && !comment.getAttachmentUrl().equals(requestDto.getAttachmentUrl())) {
+        fileStorageService.deleteFile(comment.getAttachmentUrl());
+      }
+      // attachmentUrl은 이미 FileStorageService에서 생성된 URL이라고 가정
+    }
+    // 새 첨부 파일이 없고 기존 파일 제거 요청도 없다면 기존 URL 유지
+    else {
+      updatedAttachmentUrl = comment.getAttachmentUrl();
+      updatedAttachmentType = comment.getAttachmentType();
+    }
+
+    comment.update(requestDto.getContent(), updatedAttachmentUrl, updatedAttachmentType);
+    // commentRepository.save(comment); // 변경 감지로 자동 저장
+
+    return new CommentResponseDTO(comment);
+  }
+
+  /**
+   * 특정 댓글을 소프트 삭제합니다. 대댓글은 부모 댓글이 삭제되어도 유지됩니다.
+   * @param commentId 삭제할 댓글 ID
+   * @param userId 댓글 작성자 ID (권한 검증용)
+   */
+  @Transactional
+  public void deleteComment(Long commentId, Long userId) {
+    Comment comment = commentRepository.findByIdAndIsDeletedFalse(commentId)
+        .orElseThrow(() -> new EntityNotFoundException("Comment not found or deleted with ID: " + commentId));
+
+    // 작성자만 삭제 가능
+    if (!comment.getUser().getId().equals(userId)) {
+      throw new IllegalArgumentException("You do not have permission to delete this comment.");
+    }
+
+    // 첨부 파일이 있다면 실제 파일도 삭제
+    if (comment.getAttachmentUrl() != null) {
+      fileStorageService.deleteFile(comment.getAttachmentUrl());
+    }
+
+    comment.delete(); // isDeleted를 true로 변경
+    // commentRepository.save(comment); // 변경 감지로 자동 저장
+  }
+
+  /**
+   * (옵션) 특정 유저가 작성한 모든 댓글을 조회합니다.
+   * @param userId 사용자 ID
+   * @return 댓글 목록 DTO
+   */
+  public List<CommentResponseDTO> getCommentsByUserId(Long userId) {
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+    return commentRepository.findByUser_IdAndIsDeletedFalseOrderByCreatedAtDesc(userId).stream()
+        .map(comment -> new CommentResponseDTO(comment, true)) // 내 댓글은 삭제된 내용도 볼 수 있게
+        .collect(Collectors.toList());
+  }
+}

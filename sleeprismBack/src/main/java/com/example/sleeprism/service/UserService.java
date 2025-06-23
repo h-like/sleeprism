@@ -1,5 +1,6 @@
 package com.example.sleeprism.service;
 
+import com.example.sleeprism.dto.AuthResponseDTO;
 import com.example.sleeprism.dto.UserProfileUpdateRequestDTO;
 import com.example.sleeprism.dto.UserResponseDTO;
 import com.example.sleeprism.dto.UserSignInRequestDTO;
@@ -9,18 +10,21 @@ import com.example.sleeprism.entity.LoginLog;
 import com.example.sleeprism.entity.LoginType;
 import com.example.sleeprism.entity.User;
 import com.example.sleeprism.entity.UserRole;
+import com.example.sleeprism.jwt.JwtTokenProvider;
 import com.example.sleeprism.repository.LoginLogRepository;
 import com.example.sleeprism.repository.UserRepository;
 import jakarta.persistence.EntityExistsException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder; // 비밀번호 암호화를 위해 추가
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Optional; // Optional 임포트 추가
+import java.util.Collections;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,13 +33,13 @@ public class UserService {
 
   private final UserRepository userRepository;
   private final LoginLogRepository loginLogRepository;
-  private final PasswordEncoder passwordEncoder; // SecurityConfig에서 빈으로 등록해야 함
-  private final FileStorageService fileStorageService; // 파일 업로드 서비스 (별도 구현 필요)
+  private final PasswordEncoder passwordEncoder;
+  private final FileStorageService fileStorageService;
+  private final JwtTokenProvider jwtTokenProvider;
 
   // 회원가입
   @Transactional
   public UserResponseDTO signUp(UserSignUpRequestDTO requestDto) {
-    // 사용자 이름, 닉네임, 이메일 중복 확인
     if (userRepository.existsByUsername(requestDto.getUsername())) {
       throw new EntityExistsException("Username already exists.");
     }
@@ -48,24 +52,22 @@ public class UserService {
 
     User newUser = User.builder()
         .username(requestDto.getUsername())
-        .password(passwordEncoder.encode(requestDto.getPassword())) // 비밀번호 암호화
+        .password(passwordEncoder.encode(requestDto.getPassword()))
         .nickname(requestDto.getNickname())
         .email(requestDto.getEmail())
-        .profileImageUrl(null) // 초기에는 프로필 이미지 없음
-        .role(UserRole.USER) // 기본 역할 USER
-        .status(com.example.sleeprism.entity.UserStatus.ACTIVE) // 기본 상태 ACTIVE
+        .profileImageUrl(null)
+        .role(UserRole.USER)
+        .status(com.example.sleeprism.entity.UserStatus.ACTIVE)
         .build();
 
     User savedUser = userRepository.save(newUser);
     return new UserResponseDTO(savedUser);
   }
 
-  // 일반 로그인 (Spring Security의 인증 과정과 연동됨)
-  // 이 메서드는 주로 로그인 시도 성공/실패 로그를 남기는 용도로 사용될 수 있습니다.
-  // 실제 인증은 Spring Security 필터 체인에서 처리합니다.
+  // 일반 로그인
   @Transactional
-  public UserResponseDTO signIn(UserSignInRequestDTO requestDto, String ipAddress) {
-    Optional<User> userOptional = userRepository.findByUsernameOrEmail(requestDto.getUsernameOrEmail(), requestDto.getUsernameOrEmail());
+  public AuthResponseDTO signIn(UserSignInRequestDTO requestDto, String ipAddress) {
+    Optional<User> userOptional = userRepository.findByEmail(requestDto.getEmail());
 
     boolean successStatus = false;
     User user = null;
@@ -76,14 +78,26 @@ public class UserService {
         throw new IllegalArgumentException("Invalid password.");
       }
       successStatus = true;
-      // 로그인 성공 시 추가 로직 (예: JWT 토큰 생성 및 반환)
-      // 실제 구현에서는 이 메서드가 로그인 성공 후 UserDetails 객체를 반환하거나,
-      // Controller에서 토큰을 생성하여 반환하는 흐름이 됩니다.
-      return new UserResponseDTO(user);
+
+      // JWT 토큰 생성
+      String accessToken = jwtTokenProvider.generateToken(
+          user.getId(), // userId
+          user.getEmail(), // email
+          user.getUsername(), // username (User 엔티티에 username 필드 있음)
+          Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())) // Collection<GrantedAuthority> 형태로 변환
+      );
+      // AuthResponseDTO를 빌더 패턴으로 생성하여 반환
+      return AuthResponseDTO.builder()
+          .accessToken(accessToken)
+          .userId(user.getId())
+          .email(user.getEmail())
+          .username(user.getUsername())
+          .role(user.getRole().name())
+          .build();
+
     } finally {
-      // 로그인 시도 로그 기록 (성공/실패 여부와 관계없이)
       LoginLog loginLog = LoginLog.builder()
-          .user(userOptional.orElse(null)) // 유저를 찾지 못했으면 null
+          .user(userOptional.orElse(null))
           .ipAddress(ipAddress)
           .loginType(LoginType.NORMAL)
           .successStatus(successStatus)
@@ -105,28 +119,23 @@ public class UserService {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
 
-    // 닉네임 중복 확인 (본인 제외)
     if (!user.getNickname().equals(requestDto.getNickname()) && userRepository.existsByNickname(requestDto.getNickname())) {
       throw new EntityExistsException("Nickname already exists.");
     }
-    // 이메일 중복 확인 (본인 제외)
     if (!user.getEmail().equals(requestDto.getEmail()) && userRepository.existsByEmail(requestDto.getEmail())) {
       throw new EntityExistsException("Email already exists.");
     }
 
-    user.updateNicknameAndEmail(requestDto.getNickname(), requestDto.getEmail()); // User 엔티티에 update 메서드 추가 필요
+    user.updateNicknameAndEmail(requestDto.getNickname(), requestDto.getEmail());
 
-    // 프로필 이미지 파일이 있다면 업로드 및 URL 업데이트
     if (profileImageFile != null && !profileImageFile.isEmpty()) {
-      String imageUrl = fileStorageService.uploadFile(profileImageFile, "profile-images"); // "profile-images"는 저장할 디렉토리/버킷 경로 예시
-      user.updateProfileImageUrl(imageUrl); // User 엔티티에 updateProfileImageUrl 메서드 추가 필요
+      String imageUrl = fileStorageService.uploadFile(profileImageFile, "profile-images");
+      user.updateProfileImageUrl(imageUrl);
     } else if (profileImageFile != null && profileImageFile.isEmpty() && user.getProfileImageUrl() != null) {
-      // 파일이 비어있는 채로 전달된 경우 (기존 이미지 삭제 요청)
-      fileStorageService.deleteFile(user.getProfileImageUrl()); // 기존 이미지 삭제
-      user.updateProfileImageUrl(null); // URL 초기화
+      fileStorageService.deleteFile(user.getProfileImageUrl());
+      user.updateProfileImageUrl(null);
     }
 
-    // save를 명시적으로 호출하지 않아도 @Transactional에 의해 변경 감지(Dirty Checking) 후 업데이트됨
     return new UserResponseDTO(user);
   }
 
@@ -135,6 +144,9 @@ public class UserService {
   public void deleteUser(Long userId) {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
-    userRepository.delete(user); // 실제 삭제 (Soft Delete를 원하면 User 엔티티에 isDeleted 필드 추가)
+    // NOTE: 만약 '소프트 삭제'를 원한다면 아래 라인처럼 isDeleted 필드를 true로 설정해야 합니다.
+    // user.setDeleted(true);
+    // 그렇지 않고 실제 DB에서 삭제를 원한다면 userRepository.delete(user);를 사용합니다.
+    userRepository.delete(user); // 현재는 실제 삭제 (Hard Delete)
   }
 }
