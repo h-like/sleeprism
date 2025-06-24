@@ -1,4 +1,3 @@
-// src/main/java/com/example/sleeprism/service/LocalStorageService.java
 package com.example.sleeprism.service;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -55,8 +54,8 @@ public class LocalStorageService implements FileStorageService {
     // 파일을 대상 위치로 복사합니다.
     Files.copy(file.getInputStream(), targetLocation);
 
-    // 저장된 파일의 상대 경로를 반환합니다.
-    return Paths.get(directory, storedFileName).toString();
+    // FIX: 저장된 파일의 상대 경로를 반환할 때 항상 웹 친화적인 슬래시(/)를 사용하도록 합니다.
+    return Paths.get(directory, storedFileName).toString().replace("\\", "/");
   }
 
   /**

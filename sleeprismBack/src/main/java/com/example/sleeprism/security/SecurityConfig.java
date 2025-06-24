@@ -69,6 +69,7 @@ public class SecurityConfig {
                 // 2. 게시글 조회 (GET) 허용
                 .requestMatchers(HttpMethod.GET, "/api/posts").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/*").permitAll()
+                .requestMatchers(HttpMethod.GET,  "/api/files/**").permitAll()
                 // 3. 댓글 조회 (GET) 허용
                 .requestMatchers(HttpMethod.GET, "/api/comments/post/*").permitAll()
 
@@ -81,7 +82,7 @@ public class SecurityConfig {
                     "/api/users/signin",
                     "/oauth2/**",
                     "/login/**",
-                    "/api/files/**", // 일반 파일 (예: Postman에서 테스트용)
+                    // 일반 파일 (예: Postman에서 테스트용)
                     "/api/posts/files/**" // 게시글 첨부 이미지 등
                 ).permitAll()
 

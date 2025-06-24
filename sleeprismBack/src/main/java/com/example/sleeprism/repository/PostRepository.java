@@ -2,7 +2,9 @@ package com.example.sleeprism.repository;
 
 import com.example.sleeprism.entity.Post;
 import com.example.sleeprism.entity.PostCategory;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -54,4 +56,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
   // 10. 현재 소유자()로 게시글 조회 메서드 현재 소유자(currentOwner)로 게시글 조회 메서드
   List<Post> findByCurrentOwner_IdAndIsDeletedFalseOrderByCreatedAtDesc(Long userId); // <-- 이 부분을 추가!
+
+  // FIX: 비관적 잠금을 적용한 findById 메서드 추가
+  @Lock(LockModeType.PESSIMISTIC_WRITE) // 쓰기 잠금
+  @Query("select p from Post p where p.id = :id and p.isDeleted = false") // isDeleted 조건 추가
+  Optional<Post> findById(@Param("id") Long id, LockModeType lockModeType);
+
 }
