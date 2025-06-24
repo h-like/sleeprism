@@ -20,7 +20,7 @@ public class OwnedPostResponseDTO {
   private String title;
   private String content;
   private PostCategory category;
-  private int viewCount;
+  private Long viewCount;
   private String originalAuthorNickname; // 원본 작성자 닉네임
   private Long originalAuthorId;
   private String currentOwnerNickname; // 현재 소유자 닉네임 (나 자신)

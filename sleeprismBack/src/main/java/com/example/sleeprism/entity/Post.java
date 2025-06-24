@@ -40,7 +40,7 @@ public class Post extends BaseTimeEntity{
   private PostCategory category;
 
   @Column(name = "view_count", nullable = false)
-  private int viewCount = 0;
+  private Long viewCount = 0L;
 
   @Column(name = "is_deleted", nullable = false)
   private boolean isDeleted = false;
@@ -57,6 +57,9 @@ public class Post extends BaseTimeEntity{
   // 추가: 판매된 가격 (판매 완료 시 기록)
   @Column(name = "sold_price")
   private Integer soldPrice; // Optional: 판매된 가격을 기록
+
+  @Version
+  private Long version;
 
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -93,8 +96,22 @@ public class Post extends BaseTimeEntity{
     this.title = title;
     this.content = content;
     this.category = category;
-    this.viewCount = 0;
+    this.viewCount = 0L;
     this.isDeleted = false;
+    this.version = 0L;
+  }
+
+  // 또는 @PrePersist를 사용하여 DB에 저장되기 전에 초기화합니다.
+  @PrePersist
+  public void prePersist() {
+    // viewCount, isDeleted, isSellable, isSold 등 기본값이 설정되지 않은 경우 처리
+    if (this.viewCount == null) { // viewCount가 Long 타입일 경우
+      this.viewCount = 0L;
+    }
+    if (this.version == null) { // <-- version 필드가 null인 경우 0으로 초기화
+      this.version = 0L;
+    }
+    // boolean 타입은 기본값이 false이므로 별도 처리 필요 없을 수 있음
   }
 
   // 조회수 증가 메소드

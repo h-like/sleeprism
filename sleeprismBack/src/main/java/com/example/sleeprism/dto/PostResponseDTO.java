@@ -21,7 +21,7 @@ public class PostResponseDTO {
   private String title;
   private String content;
   private PostCategory category;
-  private int viewCount;
+  private Long viewCount;
   private boolean isDeleted;
   private String authorNickname; // 작성자 닉네임 (User 엔티티의 username 필드와 매핑)
   private Long originalAuthorId;
