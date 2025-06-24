@@ -30,6 +30,7 @@ public interface FileStorageService {
    */
   void deleteFile(String fileUrl);
 
+  void deleteImagesFromHtmlContent(String htmlContent); // FIX: HTML 내용에서 이미지 삭제하는 메서드 추가
   /**
    * 지정된 상대 경로의 파일을 Spring Resource 객체로 로드합니다.
    *
