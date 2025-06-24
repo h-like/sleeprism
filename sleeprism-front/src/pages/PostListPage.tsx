@@ -15,6 +15,56 @@ interface Post {
   updatedAt: string; // DTO에 있으니 추가
 }
 
+// 이미지 URL을 파싱하고 절대 경로로 변환하는 헬퍼 함수 (PostDetailPage와 유사)
+const extractAndConvertFirstImageUrl = (htmlContent: string): string | null => {
+  if (!htmlContent) return null;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const imgElement = doc.querySelector('img'); // 첫 번째 img 태그만 선택
+
+  if (imgElement) {
+    let src = imgElement.getAttribute('src');
+    if (src) {
+      // 백엔드 기본 URL 및 컨텍스트 경로 정의 (PostCreatePage와 동일하게)
+      const BACKEND_BASE_URL = 'http://localhost:8080';
+      const BACKEND_CONTEXT_PATH = '/sleeprism';
+      const FILE_API_PATH_PREFIX = '/api/posts/files/';
+
+      // 1. 이미 'http://localhost:8080/sleeprism/' 컨텍스트 경로가 붙어있는지 확인
+      if (src.startsWith(`${BACKEND_BASE_URL}${BACKEND_CONTEXT_PATH}/`)) {
+        return src; // 이미 올바른 절대 경로이므로 그대로 반환
+      }
+      // 2. 'http://localhost:8080/'으로 시작하지만 '/sleeprism'이 없는 경우 (DB 저장된 방식)
+      else if (src.startsWith(BACKEND_BASE_URL + FILE_API_PATH_PREFIX)) {
+        // 'http://localhost:8080/api/posts/files/' -> 'http://localhost:8080/sleeprism/api/posts/files/'
+        return src.replace(BACKEND_BASE_URL, BACKEND_BASE_URL + BACKEND_CONTEXT_PATH);
+      }
+      // 3. '/api/posts/files/'로 시작하는 상대 경로인 경우 (이전 HTML Sanitizer 버전)
+      else if (src.startsWith(FILE_API_PATH_PREFIX)) {
+        // '/api/posts/files/' (상대 경로) -> 'http://localhost:8080/sleeprism/api/posts/files/'
+        return `${BACKEND_BASE_URL}${BACKEND_CONTEXT_PATH}${src}`;
+      }
+    }
+  }
+  return null; // 이미지가 없거나 src가 유효하지 않은 경우
+};
+
+// FIX: HTML에서 순수 텍스트를 추출하고 길이 제한을 적용하는 헬퍼 함수
+const getPlainTextSummary = (htmlContent: string, maxLength: number = 150): string => {
+  if (!htmlContent) return '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const textContent = doc.body.textContent || ''; // 모든 HTML 태그를 제거하고 텍스트만 추출
+
+  // 내용이 길면 잘라내고 "..." 추가
+  if (textContent.length > maxLength) {
+    return textContent.substring(0, textContent.lastIndexOf(' ', maxLength)) + '...';
+  }
+  return textContent;
+};
+
+
 function PostListPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -24,7 +74,6 @@ function PostListPage() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        // 백엔드 API 호출 URL은 현재 성공한 http://localhost:8080/sleeprism/api/posts 로 유지
         const response = await fetch('http://localhost:8080/sleeprism/api/posts');
 
         if (!response.ok) {
@@ -83,26 +132,42 @@ function PostListPage() {
           <p className="text-center text-gray-600 text-lg py-10">아직 작성된 게시글이 없습니다.</p>
         ) : (
           <div className="space-y-6">
-            {posts.map((post) => (
-              <div
-                key={post.id}
-                className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-100 transition duration-200 ease-in-out transform hover:-translate-y-1"
-                onClick={() => navigate(`/posts/${post.id}`)}
-              >
-                <h2 className="text-2xl font-semibold text-gray-800 mb-2">{post.title}</h2>
-                <p className="text-gray-600 text-sm mb-3">
-                  작성자: <span className="font-medium text-gray-700">{post.authorNickname}</span> | {/* 필드명 수정! */}
-                  카테고리: <span className="font-medium text-gray-700">{post.category}</span> |
-                  조회수: <span className="font-medium text-gray-700">{post.viewCount}</span> |
-                  작성일: <span className="font-medium text-gray-700">{new Date(post.createdAt).toLocaleDateString()}</span>
-                </p>
-                <div 
-                  className="text-gray-700 leading-relaxed text-md prose prose-blue max-w-none line-clamp-3"
-                  dangerouslySetInnerHTML={{ __html: post.content }} 
-                />
-                 <div className="text-right mt-4 text-sm text-blue-600 font-medium hover:underline">더 보기</div>
-              </div>
-            ))}
+            {posts.map((post) => {
+              const thumbnailUrl = extractAndConvertFirstImageUrl(post.content); // 첫 번째 이미지 URL 추출
+              const summaryText = getPlainTextSummary(post.content, 150); // HTML 제거 후 텍스트 요약
+              
+              return (
+                <div
+                  key={post.id}
+                  className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-100 transition duration-200 ease-in-out transform hover:-translate-y-1 flex items-start space-x-4" // flex container로 변경
+                  onClick={() => navigate(`/posts/${post.id}`)}
+                >
+                  {thumbnailUrl && (
+                    <div className="flex-shrink-0 w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={thumbnailUrl}
+                        alt="게시글 썸네일"
+                        className="w-full h-full object-cover" // 이미지가 컨테이너를 채우도록
+                      />
+                    </div>
+                  )}
+                  <div className="flex-grow"> {/* 텍스트 컨텐츠가 남은 공간을 채우도록 */}
+                    <h2 className="text-2xl font-semibold text-gray-800 mb-2">{post.title}</h2>
+                    <p className="text-gray-600 text-sm mb-3">
+                      작성자: <span className="font-medium text-gray-700">{post.authorNickname}</span> |
+                      카테고리: <span className="font-medium text-gray-700">{post.category}</span> |
+                      조회수: <span className="font-medium text-gray-700">{post.viewCount}</span> |
+                      작성일: <span className="font-medium text-gray-700">{new Date(post.createdAt).toLocaleDateString()}</span>
+                    </p>
+                    {/* FIX: dangerouslySetInnerHTML 대신 텍스트 요약 사용 */}
+                    <p className="text-gray-700 leading-relaxed text-md line-clamp-3">
+                      {summaryText}
+                    </p>
+                    <div className="text-right mt-4 text-sm text-blue-600 font-medium hover:underline">더 보기</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

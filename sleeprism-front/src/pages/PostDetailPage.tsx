@@ -11,14 +11,13 @@ interface PostDetail {
   content: string;
   category: string;
   viewCount: number;
-  // 백엔드 응답 필드명과 정확히 일치하도록 수정:
-  deleted: boolean; // <-- isDeleted -> deleted
+  deleted: boolean;
   authorNickname: string;
   originalAuthorId: number;
   createdAt: string;
   updatedAt: string;
-  sellable: boolean; // <-- isSellable -> sellable
-  sold: boolean;     // <-- isSold -> sold
+  sellable: boolean;
+  sold: boolean;
 }
 
 // JWT 토큰에서 사용자 ID를 디코딩하는 헬퍼 함수
@@ -44,9 +43,45 @@ const getUserIdFromToken = (): number | null => {
   }
 };
 
+// FIX: 이미지 URL에 백엔드 컨텍스트 경로를 추가하는 헬퍼 함수
+const convertImageUrlsWithContextPath = (htmlContent: string): string => {
+  if (!htmlContent) return '';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const images = doc.querySelectorAll('img');
+
+  images.forEach(img => {
+    let src = img.getAttribute('src');
+    if (src) {
+      // 1. 이미 'http://localhost:8080/sleeprism/' 컨텍스트 경로가 붙어있는지 확인
+      if (src.startsWith('http://localhost:8080/sleeprism/')) {
+        // 이미 올바른 경로이므로 변경하지 않습니다. (이전 게시글 등)
+        return;
+      }
+      // 2. 'http://localhost:8080/'으로 시작하지만 '/sleeprism'이 없는 경우 (현재 DB 저장된 방식)
+      //    또는 '/api/posts/files/'로 시작하는 상대 경로인 경우 (이전 HTML Sanitizer 버전)
+      const backendBaseUrl = 'http://localhost:8080';
+      const contextPath = '/sleeprism';
+      const apiPathSegment = '/api/posts/files/';
+
+      if (src.startsWith(backendBaseUrl + apiPathSegment)) {
+        // 'http://localhost:8080/api/posts/files/' -> 'http://localhost:8080/sleeprism/api/posts/files/'
+        img.setAttribute('src', src.replace(backendBaseUrl, backendBaseUrl + contextPath));
+      } else if (src.startsWith(apiPathSegment)) {
+        // '/api/posts/files/' (상대 경로) -> 'http://localhost:8080/sleeprism/api/posts/files/'
+        img.setAttribute('src', backendBaseUrl + contextPath + src);
+      }
+      // 그 외의 경우는 외부 이미지 URL이거나 다른 경로이므로 변경하지 않습니다.
+    }
+  });
+
+  return doc.documentElement.innerHTML;
+};
+
 
 function PostDetailPage() {
-  const { postId } = useParams<{ postId: string }>(); 
+  const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
 
   const [post, setPost] = useState<PostDetail | null>(null);
@@ -68,7 +103,7 @@ function PostDetailPage() {
       }
       const data: PostDetail = await response.json();
       setPost(data);
-      console.log("Debug: Post data refreshed. sellable:", data.sellable, "sold:", data.sold); // 디버그 로그도 sellable, sold로 변경
+      console.log("Debug: Post data refreshed. sellable:", data.sellable, "sold:", data.sold);
     } catch (e: any) {
       console.error("게시글 상세 정보를 새로고침하는 중 오류 발생:", e);
       setError(e.message || "게시글을 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.");
@@ -81,24 +116,25 @@ function PostDetailPage() {
   useEffect(() => {
     setCurrentUserId(getUserIdFromToken());
     refreshPostData();
-  }, [postId]); 
+  }, [postId]);
 
   // 수정 버튼 클릭 핸들러
   const handleEdit = () => {
     if (post) {
-      alert('게시글 수정 기능은 아직 구현되지 않았습니다.');
+      console.log('게시글 수정 기능은 아직 구현되지 않았습니다.');
     }
   };
 
   // 삭제 버튼 클릭 핸들러
   const handleDelete = async () => {
-    if (!post || !window.confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+    const confirmDelete = window.confirm('정말로 이 게시글을 삭제하시겠습니까?');
+    if (!post || !confirmDelete) {
       return;
     }
 
     const token = localStorage.getItem('jwtToken');
     if (!token) {
-      alert('로그인이 필요합니다.');
+      console.log('로그인이 필요합니다.');
       navigate('/login');
       return;
     }
@@ -116,7 +152,7 @@ function PostDetailPage() {
         throw new Error(errorData.message || `게시글 삭제에 실패했습니다: ${response.status}`);
       }
 
-      alert('게시글이 성공적으로 삭제되었습니다!');
+      console.log('게시글이 성공적으로 삭제되었습니다!');
       navigate('/posts');
     } catch (e: any) {
       console.error('게시글 삭제 중 오류 발생:', e);
@@ -128,7 +164,7 @@ function PostDetailPage() {
   const handleOpenSaleRequestModal = () => {
     const token = localStorage.getItem('jwtToken');
     if (!token) {
-      alert('판매 요청을 하려면 로그인이 필요합니다.');
+      console.log('판매 요청을 하려면 로그인이 필요합니다.');
       navigate('/login');
       return;
     }
@@ -165,15 +201,15 @@ function PostDetailPage() {
   }
 
   // 현재 로그인한 사용자가 게시글 작성자인지 확인
-  const isAuthor = currentUserId !== null && 
-                   typeof post.originalAuthorId === 'number' && 
-                   post.originalAuthorId === currentUserId;
-  
+  const isAuthor = currentUserId !== null &&
+                     typeof post.originalAuthorId === 'number' &&
+                     post.originalAuthorId === currentUserId;
+
   // 판매 요청 버튼 표시 조건:
-  // !isAuthor: 게시글 작성자가 아님
-  // post.sellable: 게시글이 판매 가능한 상태 (true)  <-- post.isSellable -> post.sellable
-  // !post.sold: 게시글이 아직 판매되지 않음 (false) <-- !post.isSold -> !post.sold
   const showSaleRequestButton = !isAuthor && post.sellable && !post.sold;
+
+  // FIX: post.content의 이미지 URL에 컨텍스트 경로를 추가하여 렌더링합니다.
+  const renderedContent = post ? convertImageUrlsWithContextPath(post.content) : '';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8 font-inter">
@@ -200,7 +236,6 @@ function PostDetailPage() {
                 </button>
               </>
             )}
-            {/* 판매 요청 버튼은 작성자가 아니고, 판매 가능하며, 판매되지 않은 경우에만 보임 */}
             {showSaleRequestButton && (
               <button
                 onClick={handleOpenSaleRequestModal}
@@ -218,14 +253,26 @@ function PostDetailPage() {
           카테고리: <span className="font-medium text-gray-700">{post.category}</span> |
           조회수: <span className="font-medium text-gray-700">{post.viewCount}</span> |
           작성일: <span className="font-medium text-gray-700">{new Date(post.createdAt).toLocaleDateString()}</span>
-          {post.sold && <span className="ml-3 px-2 py-1 bg-gray-300 text-gray-700 text-xs font-semibold rounded-full">판매 완료</span>} {/* post.isSold -> post.sold */}
-          {!post.sellable && <span className="ml-3 px-2 py-1 bg-red-300 text-red-700 text-xs font-semibold rounded-full">판매 불가</span>} {/* !post.isSellable -> !post.sellable */}
+          {post.sold && <span className="ml-3 px-2 py-1 bg-gray-300 text-gray-700 text-xs font-semibold rounded-full">판매 완료</span>}
+          {!post.sellable && <span className="ml-3 px-2 py-1 bg-red-300 text-red-700 text-xs font-semibold rounded-full">판매 불가</span>}
         </p>
 
-        <div 
+        <div
           className="text-gray-800 leading-relaxed text-lg prose prose-blue max-w-none border-t border-b border-gray-200 py-6"
-          dangerouslySetInnerHTML={{ __html: post.content }} 
+          dangerouslySetInnerHTML={{ __html: renderedContent }}
         />
+        <style>
+          {`
+          .prose img {
+            display: block !important;
+            max-width: 100% !important;
+            height: auto !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            object-fit: contain !important;
+          }
+          `}
+        </style>
 
         <div className="mt-8">
           <button
