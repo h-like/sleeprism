@@ -26,7 +26,7 @@ public interface FileStorageService {
   /**
    * 지정된 파일 URL에 해당하는 파일을 삭제합니다.
    *
-   * @param fileUrl 삭제할 파일의 URL (예: /files/profile-images/uuid.jpg)
+   * @param fileUrl 삭제할 파일의 URL (예: /files/profile-images/uuid.jpg) 파일
    */
   void deleteFile(String fileUrl);
 
