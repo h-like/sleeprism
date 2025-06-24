@@ -33,14 +33,8 @@ public class PostService {
   private final UserRepository userRepository;
   private final TransactionTemplate transactionTemplate; // TransactionTemplate 주입
 
-  // 생성자 주입은 @RequiredArgsConstructor가 처리하므로 직접 작성하지 않습니다.
-  // 만약 @RequiredArgsConstructor를 사용하지 않는다면 아래 생성자를 추가하세요:
-  // public PostService(PostRepository postRepository, UserRepository userRepository, TransactionTemplate transactionTemplate) {
-  //     this.postRepository = postRepository;
-  //     this.userRepository = userRepository;
-  //     this.transactionTemplate = transactionTemplate;
-  // }
-
+  @Autowired // ApplicationEventPublisher 주입
+  private ApplicationEventPublisher eventPublisher;
 
   // 게시글 생성 (변동 없음)
   @Transactional
@@ -58,15 +52,13 @@ public class PostService {
     return new PostResponseDTO(savedPost);
   }
 
-  @Autowired
-  private ApplicationEventPublisher eventPublisher;
-
   public PostResponseDTO getPostById(Long postId) {
     Post post = postRepository.findByIdAndIsDeletedFalse(postId)
         .orElseThrow(() -> new EntityNotFoundException("Post not found with ID: " + postId));
 
     // 조회수 증가는 이벤트 발행으로 분리
-    eventPublisher.publishEvent(new ViewCountIncrementEvent(postId));
+    eventPublisher.publishEvent(new ViewCountIncrementEvent(this, postId)); // source를 'this'로 전달
+    // 또는 eventPublisher.publishEvent(new ViewCountIncrementEvent(postId)); (source가 new Object()인 생성자 사용 시)
 
     // 게시글 데이터만 반환 (조회수는 즉시 반영되지 않음)
     return new PostResponseDTO(post);

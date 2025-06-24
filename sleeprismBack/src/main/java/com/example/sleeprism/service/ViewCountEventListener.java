@@ -10,6 +10,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import com.example.sleeprism.event.ViewCountIncrementEvent; // <-- 이 줄을 추가 (패키지명에 따라 변경)
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +22,7 @@ public class ViewCountEventListener {
   @EventListener
   @Async // 비동기로 처리 (Spring Boot @EnableAsync 필요)
   public void handleViewCountIncrement(ViewCountIncrementEvent event) {
-    Long postId = event.getPostId();
+    Long postId = event.getPostId(); // <-- 이제 getPostId() 메서드를 찾을 수 있습니다.
     final int MAX_RETRIES = 20; // 비동기 로직에서도 재시도는 필요
     for (int i = 0; i < MAX_RETRIES; i++) {
       try {
