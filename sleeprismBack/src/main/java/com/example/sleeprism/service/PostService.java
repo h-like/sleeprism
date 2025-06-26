@@ -43,12 +43,14 @@ public class PostService {
         .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
     String sanitizedContent = HtmlSanitizer.sanitize(requestDto.getContent());
     Post post = Post.builder()
-        .user(user)
+        .originalAuthor(user)
+        .currentOwner(user)
         .title(requestDto.getTitle())
         .content(sanitizedContent)
         .category(requestDto.getCategory())
         .build();
     Post savedPost = postRepository.save(post);
+    log.info("게시글 생성 완료: ID={}", savedPost.getId());
     return new PostResponseDTO(savedPost);
   }
 

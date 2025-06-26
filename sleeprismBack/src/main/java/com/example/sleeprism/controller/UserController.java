@@ -1,6 +1,7 @@
 package com.example.sleeprism.controller;
 
 import com.example.sleeprism.dto.*;
+import com.example.sleeprism.entity.User;
 import com.example.sleeprism.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -76,10 +77,16 @@ public class UserController {
   }
 
   // UserDetails에서 userId를 추출하는 헬퍼 메서드 (실제 구현에 따라 달라짐)
+  // UserDetails에서 userId를 추출하는 헬퍼 메서드 (실제 구현에 따라 달라짐)
   private Long extractUserIdFromUserDetails(UserDetails userDetails) {
-    // 실제로는 CustomUserDetails를 만들어서 User 엔티티나 userId를 직접 포함시킵니다.
+    // 실제 UserDetails 구현이 com.example.sleeprism.model.User라고 가정합니다.
+    // User 엔티티에 getId() 메서드가 있어서 사용자 ID를 반환한다고 가정합니다.
+    if (userDetails instanceof User) {
+      return ((User) userDetails).getId();
+    }
+    // TODO: 만약 UserDetails가 User 엔티티가 아니라 CustomUserDetails와 같은 다른 클래스라면
+    // 해당 클래스로 캐스팅하고, ID를 가져오는 적절한 메서드를 호출해야 합니다.
     // 예: ((CustomUserDetails) userDetails).getUserId();
-    // 현재는 임의로 1L을 반환 (임시방편)
-    return 1L; // TODO: 실제 Spring Security UserDetails 구현에 맞게 수정
+    throw new IllegalArgumentException("사용자 정보를 가져올 수 없습니다. UserDetails 구현을 확인하세요.");
   }
 }

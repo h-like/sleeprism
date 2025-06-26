@@ -1,24 +1,22 @@
 package com.example.sleeprism.dto;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.web.multipart.MultipartFile;
 
 @Getter
 @Setter
+@NoArgsConstructor // DTO는 기본 생성자 필요
 public class UserProfileUpdateRequestDTO {
-  @NotBlank(message = "Nickname cannot be blank.")
-  @Size(min = 2, max = 50, message = "Nickname must be between 2 and 50 characters.")
+
+  @Size(min = 2, max = 50, message = "닉네임은 2자 이상 50자 이하여야 합니다.")
   private String nickname;
 
-  @NotBlank(message = "Email cannot be blank.")
-  @Email(message = "Invalid email format.")
-  @Size(max = 100, message = "Email cannot exceed 100 characters.")
+  @Email(message = "유효한 이메일 주소를 입력해주세요.")
   private String email;
 
-  // 프로필 이미지 파일 (선택 사항)
-  private MultipartFile profileImageFile; // 파일 자체를 받기 위해 MultipartFile 사용
+  // 프로필 이미지 제거 요청을 위한 필드 추가
+  private boolean removeProfileImage; // <-- 이 필드와 Getter/Setter가 필요합니다.
 }

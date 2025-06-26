@@ -10,10 +10,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
   // JpaRepository<엔티티 타입, 엔티티의 ID 타입>
 
-  // username으로 사용자 조회 (일반 로그인)
-  Optional<User> findByUsername(String username);
-
-  // email로 사용자 조회
+  // email로 사용자 조회 (CustomUserDetailsService에서 사용)
   Optional<User> findByEmail(String email);
 
   // nickname으로 사용자 조회
@@ -22,11 +19,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
   // socialProvider와 socialId로 사용자 조회 (소셜 로그인)
   Optional<User> findBySocialProviderAndSocialId(String socialProvider, String socialId);
 
-  // username 또는 email로 사용자 조회 (로그인 시 유연하게 사용 가능)
-  Optional<User> findByUsernameOrEmail(String username, String email);
+  // --- 아래 메서드들은 User 엔티티에 'username' 필드가 없을 경우 컴파일/실행 오류를 유발하므로 제거합니다. ---
+  // Optional<User> findByUsername(String username);
+  // Optional<User> findByUsernameOrEmail(String username, String email);
+  // boolean existsByUsername(String username);
 
   // 특정 필드의 존재 여부 확인 (중복 체크 등에 활용)
-  boolean existsByUsername(String username);
   boolean existsByEmail(String email);
   boolean existsByNickname(String nickname);
 }
