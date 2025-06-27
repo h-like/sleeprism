@@ -40,7 +40,7 @@ function SaleRequestModal({ postId, postTitle, onClose, onSuccess }: SaleRequest
     };
 
     try {
-      const response = await fetch('http://localhost:8080/sleeprism/api/sale-requests', {
+      const response = await fetch('http://localhost:8080/api/sale-requests', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

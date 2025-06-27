@@ -48,7 +48,7 @@ function CommentSection({ postId }: CommentSectionProps) {
     setLoadingComments(true);
     try {
       // 백엔드 API 호출: 특정 게시글의 댓글 조회
-      const response = await fetch(`http://localhost:8080/sleeprism/api/comments/post/${postId}`);
+      const response = await fetch(`http://localhost:8080/api/comments/post/${postId}`);
       if (!response.ok) {
         throw new Error(`댓글을 불러오는데 실패했습니다: ${response.status}`);
       }
@@ -119,7 +119,7 @@ function CommentSection({ postId }: CommentSectionProps) {
         formData.append('image', newCommentImageFile); // PostController의 @RequestParam("image")와 일치
 
         // 게시글 이미지 업로드 엔드포인트 재사용
-        const uploadResponse = await fetch('http://localhost:8080/sleeprism/api/posts/upload-image', {
+        const uploadResponse = await fetch('http://localhost:8080/api/posts/upload-image', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`, // 이미지 업로드도 인증 필요
@@ -147,7 +147,7 @@ function CommentSection({ postId }: CommentSectionProps) {
       };
 
       // 3. 댓글 생성 API 호출
-      const createResponse = await fetch('http://localhost:8080/sleeprism/api/comments', {
+      const createResponse = await fetch('http://localhost:8080/api/comments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,7 +198,7 @@ function CommentSection({ postId }: CommentSectionProps) {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/sleeprism/api/comments/${commentId}`, {
+      const response = await fetch(`http://localhost:8080/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -299,7 +299,7 @@ function CommentSection({ postId }: CommentSectionProps) {
               {comment.attachmentUrl && (
                 <div className="mb-4">
                   <img 
-                    src={`http://localhost:8080/sleeprism${comment.attachmentUrl}`} // 백엔드 URL과 Context Path 결합
+                    src={`http://localhost:8080/${comment.attachmentUrl}`} // 백엔드 URL과 Context Path 결합
                     alt="첨부 이미지" 
                     className="max-w-xs sm:max-w-sm lg:max-w-md h-auto rounded-md shadow-md"
                   />

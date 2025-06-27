@@ -22,7 +22,6 @@ function PostCreatePage() {
 
   // 백엔드 기본 URL 및 컨텍스트 경로 정의
   const BACKEND_BASE_URL = 'http://localhost:8080';
-  const BACKEND_CONTEXT_PATH = '/sleeprism'; // 실제 백엔드 컨텍스트 경로에 맞게 수정
   const FILE_API_PATH_PREFIX = '/api/posts/files/'; // 파일 API의 기본 경로
 
   const editor = useEditor({
@@ -72,7 +71,7 @@ function PostCreatePage() {
     try {
       const token = localStorage.getItem('jwtToken');
       // 백엔드 upload-image 엔드포인트는 /api/posts/upload-image
-      const response = await fetch(`${BACKEND_BASE_URL}${BACKEND_CONTEXT_PATH}/api/posts/upload-image`, {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/posts/upload-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -88,7 +87,7 @@ function PostCreatePage() {
 
       // FIX: 에디터에 삽입할 이미지 URL에 컨텍스트 경로를 포함하여 절대 경로로 만듭니다.
       // 백엔드에서 '/api/posts/files/...' 형식의 URL이 반환되므로, 그 앞에 전체 백엔드 URL을 붙입니다.
-      const imageUrlForEditor = `${BACKEND_BASE_URL}${BACKEND_CONTEXT_PATH}${data.url}`;
+      const imageUrlForEditor = `${BACKEND_BASE_URL}${data.url}`;
       editor?.chain().focus().setImage({ src: imageUrlForEditor }).run();
       setSuccessMessage('이미지가 성공적으로 업로드되었습니다.');
     } catch (err: any) {
@@ -119,12 +118,12 @@ function PostCreatePage() {
     try {
       let contentToSave = editor?.getHTML() || '';
       // FIX: 데이터베이스에 저장하기 전에, 에디터 내의 절대 경로 URL을 다시 상대 경로로 변환
-      // http://localhost:8080/sleeprism/api/posts/files/ -> /api/posts/files/
+      // http://localhost:8080/api/posts/files/ -> /api/posts/files/
       // 이렇게 해야 백엔드 HtmlSanitizer가 올바르게 처리합니다.
-      const absoluteUrlPrefix = `${BACKEND_BASE_URL}${BACKEND_CONTEXT_PATH}`;
+      const absoluteUrlPrefix = `${BACKEND_BASE_URL}`;
       contentToSave = contentToSave.replace(new RegExp(absoluteUrlPrefix, 'g'), '');
       
-      const response = await fetch(`${BACKEND_BASE_URL}${BACKEND_CONTEXT_PATH}/api/posts`, {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

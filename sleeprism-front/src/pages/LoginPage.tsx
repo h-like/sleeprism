@@ -16,7 +16,7 @@ function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/sleeprism/api/users/signin', {
+      const response = await fetch('http://localhost:8080/api/users/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

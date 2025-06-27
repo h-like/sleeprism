@@ -1,56 +1,49 @@
 import React from "react";
+import { useTheme } from "../contexts/ThemeContext";
+
 
 const features = [
   {
-    title: "빠르고 간편한 사용",
-    description: "설치 없이 웹에서 바로 시작할 수 있어요.",
+    title: "꿈 이야기 커뮤니티",
+    description: "다양한 사람들과 꿈에 대해 자유롭게 이야기하고, 해몽을 나눌 수 있어요.",
+    icon: "💭",
   },
   {
-    title: "모바일 최적화",
-    description: "모든 기기에서 최상의 경험을 제공합니다.",
+    title: "수면 정보 공유",
+    description: "수면 습관, 꿀팁, 고민 등 수면에 관한 모든 이야기를 나눠보세요.",
+    icon: "🛌",
   },
   {
-    title: "무료로 사용 가능",
-    description: "가입만 하면 누구나 무료로 이용할 수 있어요.",
+    title: "백색소음 생성기",
+    description: "편안한 수면을 위한 백색소음을 직접 만들어 들을 수 있어요.",
+    icon: "🎵",
   },
 ];
 
 const LandingPage = () => {
+  const { isDarkMode } = useTheme(); // useTheme 훅 사용
+
   return (
-    <div className="font-sans text-gray-800">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-20 px-4 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold mb-6">
-          누구나 쉽게 시작하는 나만의 서비스
-        </h1>
-        <p className="text-lg md:text-xl mb-8">
-          지금 가입하고 특별한 기능들을 무료로 경험해보세요!
-        </p>
-        <button className="bg-white text-indigo-600 font-semibold px-6 py-3 rounded-full hover:bg-gray-100 transition">
-          지금 시작하기
-        </button>
+    <div className={`landing ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className="main-container">
+      <section className="hero">
+        <h1>꿈과 수면, 모두를 위한 커뮤니티</h1>
+        <p>꿈을 나누고, 수면을 개선하며, 백색소음으로 더 깊은 휴식을 경험하세요.</p>
+        <button className="start-btn">지금 시작하기</button>
       </section>
-
-      {/* Features Section */}
-      <section className="py-16 px-4 max-w-5xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-10">주요 기능</h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          {features.map((feature, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-2xl shadow-md p-6 hover:shadow-lg transition"
-            >
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-600">{feature.description}</p>
-            </div>
-          ))}
-        </div>
+      <section className="features">
+        {features.map((f, i) => (
+          <div className="feature-card" key={i}>
+            <div className="icon">{f.icon}</div>
+            <h3>{f.title}</h3>
+            <p>{f.description}</p>
+          </div>
+        ))}
       </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-100 text-center py-6 text-sm text-gray-500">
-        © 2025 MyLanding. All rights reserved.
+      <footer className="footer">
+        © 2025 SleepRism. All rights reserved.
       </footer>
+    </div>
     </div>
   );
 };

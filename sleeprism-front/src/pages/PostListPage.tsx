@@ -1,110 +1,134 @@
 // src/pages/PostListPage.tsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import '../../public/css/PostListPage.css'
 
-// Post 데이터의 타입 정의 (백엔드 PostResponseDTO와 일치하도록 수정)
 interface Post {
-  id: number;
-  title: string;
-  content: string; // content도 백엔드 DTO에 있으니 명확히 추가
-  category: string;
-  viewCount: number;
-  isDeleted: boolean; // DTO에 있으니 추가
-  authorNickname: string; // <-- originalAuthorNickname 대신 authorNickname으로 변경
-  createdAt: string; // LocalDateTime은 일반적으로 ISO 8601 형식의 문자열로 넘어옵니다.
-  updatedAt: string; // DTO에 있으니 추가
+  id: number
+  title: string
+  content: string
+  category: string
+  viewCount: number
+  isDeleted: boolean
+  authorNickname: string
+  createdAt: string
+  updatedAt: string
+  likeCount: number
+  commentCount: number
 }
 
-// 이미지 URL을 파싱하고 절대 경로로 변환하는 헬퍼 함수 (PostDetailPage와 유사)
 const extractAndConvertFirstImageUrl = (htmlContent: string): string | null => {
-  if (!htmlContent) return null;
+  if (!htmlContent) return null
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, 'text/html');
-  const imgElement = doc.querySelector('img'); // 첫 번째 img 태그만 선택
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(htmlContent, 'text/html')
+    const imgElement = doc.querySelector('img')
 
-  if (imgElement) {
-    let src = imgElement.getAttribute('src');
-    if (src) {
-      // 백엔드 기본 URL 및 컨텍스트 경로 정의 (PostCreatePage와 동일하게)
-      const BACKEND_BASE_URL = 'http://localhost:8080';
-      const BACKEND_CONTEXT_PATH = '/sleeprism';
-      const FILE_API_PATH_PREFIX = '/api/posts/files/';
-
-      // 1. 이미 'http://localhost:8080/sleeprism/' 컨텍스트 경로가 붙어있는지 확인
-      if (src.startsWith(`${BACKEND_BASE_URL}${BACKEND_CONTEXT_PATH}/`)) {
-        return src; // 이미 올바른 절대 경로이므로 그대로 반환
-      }
-      // 2. 'http://localhost:8080/'으로 시작하지만 '/sleeprism'이 없는 경우 (DB 저장된 방식)
-      else if (src.startsWith(BACKEND_BASE_URL + FILE_API_PATH_PREFIX)) {
-        // 'http://localhost:8080/api/posts/files/' -> 'http://localhost:8080/sleeprism/api/posts/files/'
-        return src.replace(BACKEND_BASE_URL, BACKEND_BASE_URL + BACKEND_CONTEXT_PATH);
-      }
-      // 3. '/api/posts/files/'로 시작하는 상대 경로인 경우 (이전 HTML Sanitizer 버전)
-      else if (src.startsWith(FILE_API_PATH_PREFIX)) {
-        // '/api/posts/files/' (상대 경로) -> 'http://localhost:8080/sleeprism/api/posts/files/'
-        return `${BACKEND_BASE_URL}${BACKEND_CONTEXT_PATH}${src}`;
+    if (imgElement) {
+      let src = imgElement.getAttribute('src')
+      if (src) {
+        const BACKEND_BASE_URL = 'http://localhost:8080'
+        const FILE_API_PATH_PREFIX = '/api/posts/files/'
+        if (src.startsWith(BACKEND_BASE_URL)) {
+          return src
+        } else if (src.startsWith(FILE_API_PATH_PREFIX)) {
+          return `${BACKEND_BASE_URL}${src}`
+        } else if (src.startsWith('/')) {
+          return `${BACKEND_BASE_URL}${src}`
+        }
       }
     }
+    return null
+  } catch (error) {
+    console.error('Error parsing HTML content:', error)
+    return null
   }
-  return null; // 이미지가 없거나 src가 유효하지 않은 경우
-};
+}
 
-// FIX: HTML에서 순수 텍스트를 추출하고 길이 제한을 적용하는 헬퍼 함수
 const getPlainTextSummary = (htmlContent: string, maxLength: number = 150): string => {
-  if (!htmlContent) return '';
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, 'text/html');
-  const textContent = doc.body.textContent || ''; // 모든 HTML 태그를 제거하고 텍스트만 추출
-
-  // 내용이 길면 잘라내고 "..." 추가
+  if (!htmlContent) return ''
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(htmlContent, 'text/html')
+  const textContent = doc.body.textContent || ''
   if (textContent.length > maxLength) {
-    return textContent.substring(0, textContent.lastIndexOf(' ', maxLength)) + '...';
+    const trimmedText = textContent.substring(0, maxLength)
+    return (
+      trimmedText.substring(0, Math.min(trimmedText.length, trimmedText.lastIndexOf(' '))) + '...'
+    )
   }
-  return textContent;
-};
-
+  return textContent
+}
 
 function PostListPage() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'latest' | 'popular'>('latest')
+  const navigate = useNavigate()
+
+  const latestTabRef = useRef<HTMLButtonElement>(null)
+  const popularTabRef = useRef<HTMLButtonElement>(null)
+  const tabIndicatorRef = useRef<HTMLDivElement>(null)
+
+  const updateTabIndicator = (tab: 'latest' | 'popular') => {
+    // 탭을 감싸는 부모 요소의 위치를 기준으로 계산
+    const parent = latestTabRef.current?.parentElement
+    const activeRef = tab === 'latest' ? latestTabRef.current : popularTabRef.current
+    const indicator = tabIndicatorRef.current
+
+    if (activeRef && indicator && parent) {
+      indicator.style.width = `${activeRef.offsetWidth}px`
+      // 부모 요소를 기준으로 상대적인 위치 계산
+      indicator.style.transform = `translateX(${activeRef.offsetLeft - parent.offsetLeft}px)`
+    }
+  }
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch('http://localhost:8080/sleeprism/api/posts');
+        const response = await fetch('http://localhost:8080/api/posts')
 
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`HTTP error! Status: ${response.status}, Response: ${errorText}`);
-          throw new Error(`게시글을 불러오는데 실패했습니다: ${response.status} ${response.statusText}`);
+          const errorText = await response.text()
+          console.error(`HTTP error! Status: ${response.status}, Response: ${errorText}`)
+          throw new Error(`게시글을 불러오는데 실패했습니다: ${response.status} ${response.statusText}`)
         }
-        
-        const data: Post[] = await response.json();
-        setPosts(data);
-      } catch (e: any) {
-        console.error("게시글 목록을 가져오는 중 오류 발생:", e);
-        setError(e.message || "알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchPosts();
-  }, []);
+        const data: Post[] = await response.json()
+        setPosts(data)
+      } catch (e: any) {
+        console.error('게시글 목록을 가져오는 중 오류 발생:', e)
+        setError(e.message || '알 수 없는 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPosts()
+  }, [])
+
+  useEffect(() => {
+    updateTabIndicator(activeTab)
+    window.addEventListener('resize', () => updateTabIndicator(activeTab))
+    return () => window.removeEventListener('resize', () => updateTabIndicator(activeTab))
+  }, [activeTab])
 
   const handleCreateNewPost = () => {
-    navigate('/posts/new');
-  };
+    navigate('/posts/new')
+  }
+
+  const handleTabClick = (tab: 'latest' | 'popular') => {
+    setActiveTab(tab)
+    console.log(`${tab} 탭이 선택되었습니다.`)
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4 font-inter">
         <p className="text-xl text-gray-700">게시글을 불러오는 중...</p>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -112,67 +136,196 @@ function PostListPage() {
       <div className="flex items-center justify-center min-h-screen bg-red-100 p-4 rounded-lg shadow-md font-inter">
         <p className="text-xl text-red-700">{error}</p>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8 font-inter">
-      <div className="max-w-4xl w-full bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">꿈 해몽 게시글</h1>
-          <button
-            onClick={handleCreateNewPost}
-            className="px-6 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:from-purple-600 hover:to-indigo-700 transition duration-300 transform hover:scale-105"
-          >
-            새 게시글 작성
-          </button>
-        </div>
+    <div className="main-container">
+      <div className="content-wrapper">
+        {/* 콘텐츠와 사이드바를 위한 Flex 컨테이너 */}
+        <div className="flex flex-col lg:flex-row lg:space-x-8">
+          {/* 메인 콘텐츠 영역 (게시글 목록) */}
+          <main className="lg:w-2/3 w-full">
+            {/* 탭 네비게이션: 첫 번째 줄에 위치 */}
+            <div className="tab-navigation mb-6">
+              <button
+                ref={latestTabRef}
+                onClick={() => handleTabClick('latest')}
+                className={`tab-button ${activeTab === 'latest' ? 'active' : ''}`}
+              >
+                최신글
+              </button>
+              <button
+                ref={popularTabRef}
+                onClick={() => handleTabClick('popular')}
+                className={`tab-button ${activeTab === 'popular' ? 'active' : ''}`}
+              >
+                인기글
+              </button>
+              {/* 탭 인디케이터 바 */}
+              {/* <div ref={tabIndicatorRef} className="tab-indicator"></div> */}
+            </div>
 
-        {posts.length === 0 ? (
-          <p className="text-center text-gray-600 text-lg py-10">아직 작성된 게시글이 없습니다.</p>
-        ) : (
-          <div className="space-y-6">
-            {posts.map((post) => {
-              const thumbnailUrl = extractAndConvertFirstImageUrl(post.content); // 첫 번째 이미지 URL 추출
-              const summaryText = getPlainTextSummary(post.content, 150); // HTML 제거 후 텍스트 요약
-              
-              return (
-                <div
-                  key={post.id}
-                  className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-100 transition duration-200 ease-in-out transform hover:-translate-y-1 flex items-start space-x-4" // flex container로 변경
-                  onClick={() => navigate(`/posts/${post.id}`)}
-                >
-                  {thumbnailUrl && (
-                    <div className="flex-shrink-0 w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border border-gray-200">
-                      <img
-                        src={thumbnailUrl}
-                        alt="게시글 썸네일"
-                        className="w-full h-full object-cover" // 이미지가 컨테이너를 채우도록
-                      />
-                    </div>
-                  )}
-                  <div className="flex-grow"> {/* 텍스트 컨텐츠가 남은 공간을 채우도록 */}
-                    <h2 className="text-2xl font-semibold text-gray-800 mb-2">{post.title}</h2>
-                    <p className="text-gray-600 text-sm mb-3">
-                      작성자: <span className="font-medium text-gray-700">{post.authorNickname}</span> |
-                      카테고리: <span className="font-medium text-gray-700">{post.category}</span> |
-                      조회수: <span className="font-medium text-gray-700">{post.viewCount}</span> |
-                      작성일: <span className="font-medium text-gray-700">{new Date(post.createdAt).toLocaleDateString()}</span>
-                    </p>
-                    {/* FIX: dangerouslySetInnerHTML 대신 텍스트 요약 사용 */}
-                    <p className="text-gray-700 leading-relaxed text-md line-clamp-3">
-                      {summaryText}
-                    </p>
-                    <div className="text-right mt-4 text-sm text-blue-600 font-medium hover:underline">더 보기</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+            {/* 게시글 목록 */}
+            {posts.length === 0 ? (
+              <p className="text-center text-gray-600 text-lg py-10">아직 작성된 게시글이 없습니다.</p>
+            ) : (
+              <ul className="post-list">
+                {posts.map((post) => {
+                  const thumbnailUrl = extractAndConvertFirstImageUrl(post.content)
+                  const summaryText = getPlainTextSummary(post.content)
+
+                  return (
+                    <li
+                      key={post.id}
+                      className="post-item"
+                      onClick={() => navigate(`/posts/${post.id}`)}
+                    >
+                      {/* 썸네일 영역: 이미지가 있을 때만 표시 */}
+                      <div className={`post-thumbnail ${!thumbnailUrl ? 'no-image' : ''}`}>
+                        {thumbnailUrl && <img src={thumbnailUrl} alt="게시글 썸네일" />}
+                      </div>
+                      <div className="post-info">
+                        <h2 className="post-title">{post.title}</h2>
+                        <p className="post-summary">{summaryText || '내용이 없습니다.'}</p>
+                        <div className="post-meta">
+                          <span className="post-meta-item">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="lucide lucide-user"
+                            >
+                              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                              <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            <span>{post.authorNickname}</span>
+                          </span>
+                          <span className="post-meta-item">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="lucide lucide-calendar"
+                            >
+                              <path d="M8 2v4" />
+                              <path d="M16 2v4" />
+                              <rect width="18" height="18" x="3" y="4" rx="2" />
+                              <path d="M3 10h18" />
+                            </svg>
+                            <span>{new Date(post.createdAt).toLocaleDateString('ko-KR')}</span>
+                          </span>
+                          <span className="post-meta-item">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="lucide lucide-message-circle"
+                            >
+                              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                            </svg>
+                            <span>{post.commentCount}</span>
+                          </span>
+                          <span className="post-meta-item">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="lucide lucide-thumbs-up"
+                            >
+                              <path d="M7 10v12h11c1.1 0 2-1 2-2V8.5a2 2 0 0 0-1-1.74l-4.24-2.12a2 2 0 0 0-1.72 0L8 5.76A2 2 0 0 0 7 7.5V10Z" />
+                              <path d="M2 17h3a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H2v12Z" />
+                            </svg>
+                            <span>{post.likeCount}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </main>
+
+          {/* 사이드바 영역 */}
+          <aside className="lg:w-1/3 w-full mt-8 lg:mt-0">
+            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">바로 그 데이블입니다!</h3>
+              <p className="text-gray-600 mb-4">데이블에 참여해보세요!</p>
+              <button className="w-full py-3 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition duration-300">
+                로그인하기
+              </button>
+            </div>
+            <div className="mt-6 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">테이블의 핵심 기능을 확인해 보세요</h3>
+              <ul className="space-y-3 text-gray-700">
+                <li className="flex items-center space-x-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-check-circle text-green-500"
+                  >
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <path d="m9 11 3 3L22 4" />
+                  </svg>
+                  <span>테이블 참여방법</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-check-circle text-green-500"
+                  >
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <path d="m9 11 3 3L22 4" />
+                  </svg>
+                  <span>테이블 프로필 만들고 관리하기</span>
+                </li>
+              </ul>
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
-  );
+  )
 }
 
-export default PostListPage;
+export default PostListPage

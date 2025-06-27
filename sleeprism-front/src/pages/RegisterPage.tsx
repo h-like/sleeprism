@@ -25,7 +25,7 @@ function RegisterPage() {
   // 회원가입 성공 후 자동 로그인 처리 함수
   const autoSignIn = async (userEmail: string, userPassword: string) => {
     try {
-      const response = await fetch('http://localhost:8080/sleeprism/api/users/signin', {
+      const response = await fetch('http://localhost:8080/api/users/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ function RegisterPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/sleeprism/api/users/signup', {
+      const response = await fetch('http://localhost:8080/api/users/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

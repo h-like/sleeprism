@@ -1,8 +1,9 @@
-// src/pages/PostDetailPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CommentSection from '../components/CommentSection';
 import SaleRequestModal from '../components/SaleRequestModal';
+import { createOrGetSingleChatRoom } from '../service/ChatService';
+// import { createOrGetSingleChatRoom } from '../services/ChatService'; // ChatService에서 함수 임포트
 
 // Post 데이터의 타입 정의 (백엔드 PostResponseDTO와 일치해야 합니다)
 interface PostDetail {
@@ -13,7 +14,7 @@ interface PostDetail {
   viewCount: number;
   deleted: boolean;
   authorNickname: string;
-  originalAuthorId: number;
+  originalAuthorId: number; // 게시글 원본 작성자 ID
   createdAt: string;
   updatedAt: string;
   sellable: boolean;
@@ -21,6 +22,13 @@ interface PostDetail {
 }
 
 // JWT 토큰에서 사용자 ID를 디코딩하는 헬퍼 함수
+// ChatRoomList 및 ChatWindow와 동일하게 통일 (authUtils에서 import)
+interface DecodedToken {
+  userId?: number;
+  id?: number;
+  sub?: string;
+}
+
 const getUserIdFromToken = (): number | null => {
   const token = localStorage.getItem('jwtToken');
   if (!token) {
@@ -33,7 +41,7 @@ const getUserIdFromToken = (): number | null => {
       return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
     }).join(''));
 
-    const decodedToken = JSON.parse(jsonPayload);
+    const decodedToken: DecodedToken = JSON.parse(jsonPayload);
     const userIdRaw = decodedToken.userId || decodedToken.id || decodedToken.sub;
     const userId = typeof userIdRaw === 'number' ? userIdRaw : parseInt(userIdRaw as string, 10);
     return isNaN(userId) ? null : userId;
@@ -43,7 +51,7 @@ const getUserIdFromToken = (): number | null => {
   }
 };
 
-// FIX: 이미지 URL에 백엔드 컨텍스트 경로를 추가하는 헬퍼 함수
+// FIX: 이미지 URL에 백엔드 컨텍스트 경로를 추가하는 헬퍼 함수 (기존과 동일)
 const convertImageUrlsWithContextPath = (htmlContent: string): string => {
   if (!htmlContent) return '';
 
@@ -54,29 +62,23 @@ const convertImageUrlsWithContextPath = (htmlContent: string): string => {
   images.forEach(img => {
     let src = img.getAttribute('src');
     if (src) {
-      // 1. 이미 'http://localhost:8080/sleeprism/' 컨텍스트 경로가 붙어있는지 확인
-      if (src.startsWith('http://localhost:8080/sleeprism/')) {
-        // 이미 올바른 경로이므로 변경하지 않습니다. (이전 게시글 등)
-        return;
-      }
-      // 2. 'http://localhost:8080/'으로 시작하지만 '/sleeprism'이 없는 경우 (현재 DB 저장된 방식)
-      //    또는 '/api/posts/files/'로 시작하는 상대 경로인 경우 (이전 HTML Sanitizer 버전)
       const backendBaseUrl = 'http://localhost:8080';
-      const contextPath = '/sleeprism';
+    
       const apiPathSegment = '/api/posts/files/';
 
-      if (src.startsWith(backendBaseUrl + apiPathSegment)) {
-        // 'http://localhost:8080/api/posts/files/' -> 'http://localhost:8080/sleeprism/api/posts/files/'
-        img.setAttribute('src', src.replace(backendBaseUrl, backendBaseUrl + contextPath));
+      if (src.startsWith(`${backendBaseUrl}/`)) {
+        return; // 이미 올바른 경로이므로 변경하지 않습니다.
+      } else if (src.startsWith(backendBaseUrl + apiPathSegment)) {
+        img.setAttribute('src', src.replace(backendBaseUrl, backendBaseUrl ));
       } else if (src.startsWith(apiPathSegment)) {
-        // '/api/posts/files/' (상대 경로) -> 'http://localhost:8080/sleeprism/api/posts/files/'
-        img.setAttribute('src', backendBaseUrl + contextPath + src);
+        img.setAttribute('src', backendBaseUrl +  src);
       }
-      // 그 외의 경우는 외부 이미지 URL이거나 다른 경로이므로 변경하지 않습니다.
     }
   });
 
-  return doc.documentElement.innerHTML;
+  // document.documentElement.innerHTML 대신, <body> 내부의 HTML만 반환합니다.
+  // 왜냐하면 <html>, <head> 태그는 필요 없고, 콘텐츠만 렌더링하기 위함입니다.
+  return doc.body.innerHTML;
 };
 
 
@@ -93,7 +95,7 @@ function PostDetailPage() {
   const refreshPostData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/sleeprism/api/posts/${postId}`);
+      const response = await fetch(`http://localhost:8080/api/posts/${postId}`);
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error('게시글을 찾을 수 없습니다.');
@@ -140,7 +142,7 @@ function PostDetailPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/sleeprism/api/posts/${post.id}`, {
+      const response = await fetch(`http://localhost:8080/api/posts/${post.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -176,6 +178,28 @@ function PostDetailPage() {
     setIsSaleRequestModalOpen(false);
   };
 
+  // 1:1 채팅 시작 핸들러
+  const handleStartChat = async () => {
+    if (!post || !currentUserId) {
+      alert("로그인이 필요하거나 게시글 정보가 없습니다.");
+      return;
+    }
+    if (currentUserId === post.originalAuthorId) {
+      alert("자신에게 채팅을 시작할 수 없습니다.");
+      return;
+    }
+
+    try {
+      const chatRoom = await createOrGetSingleChatRoom(post.originalAuthorId);
+      alert(`${post.authorNickname}님과의 채팅방으로 이동합니다.`);
+      navigate(`/chat/${chatRoom.id}`); // 생성되거나 조회된 채팅방으로 이동
+    } catch (err: any) {
+      console.error("채팅방 생성 또는 조회 실패:", err);
+      alert(`채팅 시작 실패: ${err.message}`);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4 font-inter">
@@ -202,8 +226,8 @@ function PostDetailPage() {
 
   // 현재 로그인한 사용자가 게시글 작성자인지 확인
   const isAuthor = currentUserId !== null &&
-                     typeof post.originalAuthorId === 'number' &&
-                     post.originalAuthorId === currentUserId;
+                       typeof post.originalAuthorId === 'number' &&
+                       post.originalAuthorId === currentUserId;
 
   // 판매 요청 버튼 표시 조건:
   const showSaleRequestButton = !isAuthor && post.sellable && !post.sold;
@@ -243,6 +267,16 @@ function PostDetailPage() {
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-badge-dollar-sign mr-1"><path d="M3.34 18.27a10 10 0 1 1 17.32 0"/><path d="M16 16.27a2 2 0 0 0 0-4H8"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
                 판매 요청
+              </button>
+            )}
+            {/* 1:1 채팅 시작 버튼 (게시글 작성자가 아니고, 로그인되어 있다면) */}
+            {!isAuthor && currentUserId && (
+              <button
+                onClick={handleStartChat}
+                className="px-4 py-2 bg-purple-500 text-white font-semibold rounded-lg shadow-md hover:bg-purple-600 transition duration-300 transform hover:scale-105 flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle-code"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="m10 10-2 2 2 2"/><path d="m14 14 2-2-2-2"/></svg>
+                1:1 채팅
               </button>
             )}
           </div>
