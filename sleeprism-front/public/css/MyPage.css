@@ -1,0 +1,759 @@
+/* MyPage.css */
+
+.mypage-container {
+  display: flex;
+  min-height: calc(100vh - 60px); /* 헤더 높이를 제외한 최소 높이 */
+  margin-top: 60px; /* 헤더 아래로 배치 */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 라이트 모드 (몽환적인 유리 느낌) */
+.mypage-container.light {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(240, 240, 240, 0.7)); /* 부드러운 그라데이션 */
+  color: #333;
+}
+
+.mypage-container.light .mypage-sidebar {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.mypage-container.light .mypage-sidebar button {
+  background: rgba(255, 255, 255, 0.9);
+  color: #555;
+  border: 1px solid rgba(220, 220, 220, 0.7);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.mypage-container.light .mypage-sidebar button:hover,
+.mypage-container.light .mypage-sidebar button.active {
+  background: rgba(230, 230, 230, 0.9);
+  color: #007bff;
+  border-color: #007bff;
+}
+
+.mypage-container.light .mypage-dashboard .card {
+  background: rgba(255, 255, 255, 0.85); /* 약간 불투명한 흰색 */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* 그림자 */
+  backdrop-filter: blur(10px); /* 유리 효과 */
+  -webkit-backdrop-filter: blur(10px); /* Safari 지원 */
+  border: 1px solid rgba(255, 255, 255, 0.5); /* 미세한 테두리 */
+}
+
+/* 다크 모드 (이미지 느낌) */
+.mypage-container.dark {
+  background-color: #1e1e2e; /* 이미지 배경색과 유사 */
+  color: #e0e0e0;
+}
+
+.mypage-container.dark .mypage-sidebar {
+  background-color: #2a2a3e;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.mypage-container.dark .mypage-sidebar button {
+  background-color: #3a3a4e;
+  color: #ccc;
+  border: 1px solid #4a4a5e;
+}
+
+.mypage-container.dark .mypage-sidebar button:hover,
+.mypage-container.dark .mypage-sidebar button.active {
+  background-color: #4a4a5e;
+  color: #9370db; /* 다크 모드 강조 색상 */
+  border-color: #9370db;
+}
+
+.mypage-container.dark .mypage-dashboard .card {
+  background-color: #2a2a3e; /* 이미지 카드 배경색과 유사 */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  border: 1px solid #3a3a4e;
+}
+
+.mypage-sidebar {
+  width: 250px;
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0; /* 축소되지 않도록 */
+}
+
+.mypage-sidebar button {
+  display: block;
+  width: 100%;
+  padding: 12px 15px;
+  text-align: left;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.mypage-sidebar button.active {
+  font-weight: bold;
+}
+
+.mypage-content {
+  flex-grow: 1;
+  padding: 30px;
+  overflow-y: auto; /* 내용이 넘칠 경우 스크롤 */
+}
+
+/* 마이페이지 대시보드 */
+.mypage-dashboard {
+  font-family: 'Inter', sans-serif;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+}
+
+.user-zone {
+  background-color: #6a0571;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 0.8fr 2fr; /* 프로필 섹션을 조금 작게 */
+  gap: 30px;
+  align-items: start; /* 상단 정렬 */
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 25px;
+}
+
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 20px;
+  border: 4px solid #9370db; /* 강조 테두리 */
+}
+
+.profile-section h2 {
+  font-size: 1.8em;
+  margin-bottom: 5px;
+}
+
+.profile-section p {
+  font-size: 0.95em;
+  color: #999;
+  margin-bottom: 15px;
+}
+
+.user-info p {
+  margin-bottom: 5px;
+  color: inherit; /* 부모 요소의 색상 상속 */
+}
+
+.sleep-patterns, .sleep-analysis {
+  width: 100%;
+  margin-top: 20px;
+  text-align: left;
+}
+
+.sleep-patterns h3, .sleep-analysis h3 {
+  font-size: 1.2em;
+  margin-bottom: 10px;
+}
+
+.sleep-patterns .dashboard-button {
+  width: auto;
+  padding: 8px 15px;
+  margin-right: 10px;
+  background-color: #555;
+  color: white;
+  border-radius: 20px;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.mypage-container.light .sleep-patterns .dashboard-button {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.mypage-container.dark .sleep-patterns .dashboard-button {
+  background-color: #4a4a5e;
+  color: #e0e0e0;
+}
+
+
+.sleep-patterns .dashboard-button:hover {
+  opacity: 0.8;
+}
+
+.main-content-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.card {
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Specific card styles */
+.upcoming-features ul,
+.recent-sleep-logs ul,
+.your-sleep-insights ul,
+.experts-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.upcoming-features li,
+.recent-sleep-logs li,
+.your-sleep-insights li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 0.95em;
+}
+
+.mypage-container.dark .upcoming-features li,
+.mypage-container.dark .recent-sleep-logs li,
+.mypage-container.dark .your-sleep-insights li {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.upcoming-features li:last-child,
+.recent-sleep-logs li:last-child,
+.your-sleep-insights li:last-child {
+  border-bottom: none;
+}
+
+.upcoming-features i, .recent-sleep-logs i, .your-sleep-insights i {
+  margin-right: 10px;
+  color: #007bff; /* 아이콘 색상 */
+}
+.mypage-container.dark .upcoming-features i,
+.mypage-container.dark .recent-sleep-logs i,
+.mypage-container.dark .your-sleep-insights i {
+  color: #9370db;
+}
+
+.recent-sleep-logs .add-entry-button {
+  background-color: #007bff;
+  color: white;
+  border-radius: 20px;
+  padding: 10px 20px;
+  margin-top: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.mypage-container.dark .recent-sleep-logs .add-entry-button {
+  background-color: #9370db;
+}
+
+.recent-sleep-logs .add-entry-button:hover {
+  opacity: 0.9;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  text-align: center;
+}
+
+.calendar-day-header {
+  font-weight: bold;
+  padding: 5px 0;
+}
+
+.calendar-date {
+  padding: 5px 0;
+  border-radius: 4px;
+}
+
+.calendar-date.highlight {
+  background-color: #007bff;
+  color: white;
+}
+.mypage-container.dark .calendar-date.highlight {
+  background-color: #9370db;
+}
+
+.find-resources .resource-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.find-resources .dashboard-button {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.mypage-container.dark .find-resources .dashboard-button {
+  background-color: #3a3a4e;
+  color: #e0e0e0;
+  border-color: #4a4a5e;
+}
+
+.find-resources .dashboard-button:hover {
+  background-color: #e0e0e0;
+  border-color: #007bff;
+}
+.mypage-container.dark .find-resources .dashboard-button:hover {
+  background-color: #4a4a5e;
+  border-color: #9370db;
+}
+
+
+.your-dream-journal .dream-entries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.your-dream-journal .dream-item {
+  background-color: #e9f5ff; /* 배경색 */
+  border-left: 5px solid #007bff; /* 강조 테두리 */
+  padding: 10px 15px;
+  border-radius: 8px;
+  flex: 1 1 calc(50% - 10px); /* 두 열로 배치 */
+  min-width: 150px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 0.9em;
+}
+.mypage-container.dark .your-dream-journal .dream-item {
+  background-color: #3a3a4e;
+  border-left-color: #9370db;
+}
+
+.experts-section ul li {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+.mypage-container.dark .experts-section ul li {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.experts-section ul li:last-child {
+  border-bottom: none;
+}
+
+.expert-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 15px;
+}
+
+.expert-info h4 {
+  margin: 0;
+  font-size: 1em;
+}
+
+.expert-info p {
+  margin: 0;
+  font-size: 0.85em;
+  color: #999;
+}
+
+/* 마이페이지 서브 페이지 공통 스타일 */
+.mypage-subpage {
+  padding: 20px;
+  border-radius: 12px;
+  background-color: transparent; /* 배경색은 컨테이너에서 상속 */
+}
+
+.mypage-subpage h2 {
+  font-size: 2em;
+  margin-bottom: 25px;
+  color: inherit;
+}
+
+.profile-edit-form .form-group {
+  margin-bottom: 20px;
+}
+
+.profile-edit-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.profile-edit-form input[type="text"],
+.profile-edit-form input[type="email"],
+.profile-edit-form input[type="password"],
+.profile-edit-form input[type="file"] {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1em;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.mypage-container.dark .profile-edit-form input {
+  background-color: #3a3a4e;
+  border-color: #4a4a5e;
+  color: #e0e0e0;
+}
+
+
+.profile-edit-form input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  outline: none;
+}
+.mypage-container.dark .profile-edit-form input:focus {
+  border-color: #9370db;
+  box-shadow: 0 0 0 2px rgba(147, 112, 219, 0.25);
+}
+
+
+.profile-edit-form .primary-button {
+  background-color: #007bff;
+  color: white;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+  margin-right: 15px;
+}
+.mypage-container.dark .profile-edit-form .primary-button {
+  background-color: #9370db;
+}
+
+.profile-edit-form .primary-button:hover {
+  background-color: #0056b3;
+}
+.mypage-container.dark .profile-edit-form .primary-button:hover {
+  background-color: #7b4edc;
+}
+
+
+.profile-edit-form .secondary-button {
+  background-color: #6c757d;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95em;
+  margin-left: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.profile-edit-form .secondary-button:hover {
+  background-color: #5a6268;
+}
+
+.profile-edit-form .danger-button {
+  background-color: #dc3545;
+  color: white;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.profile-edit-form .danger-button:hover {
+  background-color: #c82333;
+}
+
+/* MyPage.css에 추가 */
+
+/* 로딩/에러/성공 메시지 스타일 */
+.error-message {
+    color: #e53e3e; /* 붉은색 */
+    background-color: #fed7d7; /* 연한 붉은색 배경 */
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    border: 1px solid #e53e3e;
+}
+
+.success-message {
+    color: #38a169; /* 초록색 */
+    background-color: #c6f6d5; /* 연한 초록색 배경 */
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    border: 1px solid #38a169;
+}
+
+/* 폼 그룹 스타일 */
+.profile-edit-form .form-group {
+    margin-bottom: 20px; /* 각 폼 그룹 아래 간격 */
+}
+
+.profile-edit-form label {
+    display: block; /* 라벨을 블록 레벨로 설정 */
+    margin-bottom: 8px; /* 라벨과 입력 필드 사이 간격 */
+    font-weight: 600; /* 글씨 굵게 */
+    color: #333; /* 기본 글씨 색상 */
+}
+
+/* 다크 모드일 때 라벨 글씨 색상 */
+.mypage-container.dark .profile-edit-form label {
+    color: #edf2f7;
+}
+
+.profile-edit-form input[type="text"],
+.profile-edit-form input[type="email"],
+.profile-edit-form input[type="password"] {
+    width: calc(100% - 20px); /* 전체 너비에서 좌우 패딩을 제외한 너비 */
+    padding: 10px;
+    border: 1px solid #ccc; /* 테두리 */
+    border-radius: 5px; /* 둥근 모서리 */
+    font-size: 1rem;
+    background-color: #fff; /* 입력 필드 배경색 */
+    color: #333; /* 입력 텍스트 색상 */
+}
+
+/* 다크 모드일 때 입력 필드 스타일 */
+.mypage-container.dark .profile-edit-form input {
+    background-color: #4a5568;
+    border-color: #667e91;
+    color: #edf2f7;
+}
+
+.profile-edit-form input[type="file"] {
+    display: block;
+    margin-top: 5px;
+}
+
+/* 프로필 이미지 미리보기 섹션 */
+.profile-image-preview-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* 아이템들을 좌측으로 정렬 */
+}
+
+.profile-image-wrapper {
+    display: flex;
+    align-items: center; /* 세로 중앙 정렬 */
+    gap: 15px; /* 이미지와 버튼/파일 입력 필드 사이 간격 */
+    margin-top: 10px;
+}
+
+.profile-preview-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%; /* 원형 이미지 */
+    object-fit: cover; /* 이미지 비율 유지하며 채우기 */
+    border: 2px solid #ddd; /* 테두리 */
+}
+
+/* 다크 모드일 때 미리보기 이미지 테두리 */
+.mypage-container.dark .profile-preview-avatar {
+    border-color: #667e91;
+}
+
+.file-input {
+    flex-grow: 1; /* 남은 공간을 차지하도록 확장 */
+    min-width: 150px; /* 파일 입력 필드의 최소 너비 */
+}
+
+
+/* 공통 버튼 스타일 */
+.primary-button, .secondary-button, .danger-button {
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+    border: none;
+    margin-right: 10px; /* 버튼들 사이 간격 */
+}
+
+/* 주요 액션 버튼 (저장) */
+.primary-button {
+    background-color: #4299e1; /* Tailwind blue-500 */
+    color: white;
+}
+
+.primary-button:hover:not(:disabled) {
+    background-color: #3182ce; /* Tailwind blue-600 (호버 효과) */
+}
+
+/* 보조 액션 버튼 (이미지 제거) */
+.secondary-button {
+    background-color: #e2e8f0; /* Tailwind gray-200 */
+    color: #2d3748; /* Tailwind gray-800 */
+}
+
+/* 다크 모드일 때 보조 버튼 */
+.mypage-container.dark .secondary-button {
+    background-color: #667e91; /* Tailwind gray-600 */
+    color: #edf2f7;
+}
+
+.secondary-button:hover:not(:disabled) {
+    background-color: #cbd5e0; /* Tailwind gray-300 (호버 효과) */
+}
+
+/* 다크 모드일 때 보조 버튼 호버 */
+.mypage-container.dark .secondary-button:hover:not(:disabled) {
+    background-color: #4a5568; /* Tailwind gray-700 (호버 효과) */
+}
+
+/* 위험 액션 버튼 (회원 탈퇴) */
+.danger-button {
+    background-color: #e53e3e; /* Tailwind red-600 */
+    color: white;
+}
+
+.danger-button:hover:not(:disabled) {
+    background-color: #c53030; /* Tailwind red-700 (호버 효과) */
+}
+
+/* 비활성화된 버튼 스타일 */
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled {
+    opacity: 0.6; /* 투명도를 낮춰 비활성화 상태 표시 */
+    cursor: not-allowed; /* 마우스 커서 변경 */
+}
+
+/* 모바일 반응형 조정 */
+@media (max-width: 768px) {
+    .profile-edit-form button {
+        width: 100%; /* 모바일에서 버튼 너비 100% */
+        margin-right: 0; /* 우측 마진 제거 */
+        margin-bottom: 10px; /* 버튼 세로 간격 */
+    }
+
+    .profile-image-wrapper {
+        flex-direction: column; /* 이미지를 세로로 정렬 */
+        align-items: center; /* 중앙 정렬 */
+    }
+}
+
+/* 마이페이지 서브 페이지에 패딩 추가 (레이아웃 개선) */
+.mypage-subpage {
+    padding: 20px;
+}
+
+
+
+/* 반응형 디자인 */
+@media (max-width: 1024px) {
+  .dashboard-content {
+    grid-template-columns: 1fr; /* 1열 레이아웃으로 변경 */
+  }
+
+  .main-content-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2열로 변경 */
+  }
+}
+
+@media (max-width: 768px) {
+  .mypage-container {
+    flex-direction: column;
+    margin-top: 60px; /* 모바일 헤더 높이와 일치 */
+  }
+
+  .mypage-sidebar {
+    width: 100%;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    flex-direction: row; /* 버튼을 가로로 배열 */
+    flex-wrap: wrap; /* 공간 부족 시 다음 줄로 */
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .mypage-sidebar button {
+    width: auto; /* 내용에 따라 너비 자동 조절 */
+    padding: 10px 15px;
+    font-size: 1em;
+  }
+
+  .mypage-content {
+    padding: 20px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 2em;
+  }
+
+  .main-content-grid {
+    grid-template-columns: 1fr; /* 모바일에서는 1열로 변경 */
+  }
+
+  .profile-section {
+    padding: 20px;
+  }
+
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+  }
+
+  .user-zone {
+    padding: 6px 15px;
+    font-size: 0.9em;
+  }
+
+  .find-resources .resource-buttons {
+    grid-template-columns: repeat(2, 1fr); /* 모바일에서는 2열로 변경 */
+  }
+}
+
+@media (max-width: 480px) {
+  .mypage-sidebar {
+    flex-direction: column; /* 아주 작은 화면에서는 다시 세로로 */
+  }
+
+  .mypage-sidebar button {
+    width: 100%;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .user-zone {
+    align-self: flex-end;
+  }
+}

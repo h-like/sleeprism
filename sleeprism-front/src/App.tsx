@@ -8,12 +8,14 @@ import PostCreatePage from './pages/PostCreatePage';
 import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
 import NotFoundPage from './pages/NotFoundPage';
-import Header from './components/Header';
+
 import ChatRoomList from './components/ChatRoomList';
 import ChatWindow from './components/ChatWindow';
 import CreateGroupChatRoomPage from './pages/CreateGroupChatRoomPage';
 import ChatBlockedUsersPage from './pages/ChatBlockedUsersPage';
 import { ThemeProvider } from './contexts/ThemeContext';
+import Header from './components/Header';
+import MyPage from './components/MyPage';
 
 function App() {
   // 다크 모드 상태 관리
@@ -40,6 +42,7 @@ function App() {
         <Route path="/chat/:chatRoomId" element={<ChatWindow />} />
         <Route path="/chat/create-group" element={<CreateGroupChatRoomPage />} />
         <Route path="/chat/blocked-users" element={<ChatBlockedUsersPage />} />
+        <Route path="/myPage" element={<MyPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
       </ThemeProvider>

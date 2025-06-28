@@ -3,8 +3,6 @@
 /* 전체 페이지 컨테이너: 중앙 정렬 및 배경 */
 .main-container {
     min-height: 100vh;
-   /* background: linear-gradient(135deg, #fdf2f8, #e4e0ff, #c8e7f7); */
- /* 분홍 + 연보라 */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -105,7 +103,6 @@
 .post-title {
     font-size: 1.25rem; /* 20px */
     font-weight: 700;
-    color: #212529;
     margin-top: 3px;
     margin-bottom: 3px;
     white-space: nowrap;
@@ -155,7 +152,7 @@
 .tab-navigation {
     display: flex;
     margin-bottom: 24px;
-    border-bottom: 2px solid #fafafa; /* 부드러운 경계선 */
+    border-bottom: 1px solid #ddd; /* 부드러운 경계선 */
     position: relative;
 }
 
@@ -204,7 +201,7 @@
 /* 글쓰기 버튼 스타일 */
 /* ==================================================================== */
 .create-post-button {
-    display: inline-flex;
+    display: inline-flex; */
     align-items: center;
     gap: 8px; /* 아이콘과 텍스트 사이 간격 */
     padding: 12px 24px;
@@ -215,7 +212,7 @@
     box-shadow: 0 6px 20px rgba(76, 110, 245, 0.3); /* 부드러운 그림자 */
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: none;
-    cursor: pointer;
+    cursor: pointer;    
 }
 
 .create-post-button:hover {
@@ -227,6 +224,14 @@
     width: 20px;
     height: 20px;
 }
+
+.create-post-button button {
+display: 'flex';
+  justify-content: space-between;
+}
+
+
+
 
 /* ==================================================================== */
 /* 기타 스타일 조정 (선택 사항) */

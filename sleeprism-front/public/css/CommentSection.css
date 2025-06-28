@@ -1,0 +1,235 @@
+/* public/css/CommentSection.css */
+
+/* 댓글 섹션 전체 컨테이너 */
+.comment-section-container {
+    width: 100%;
+    max-width: 900px;
+    padding: 32px;
+    border-radius: 16px;
+    /* border: 1px solid #e5e7eb; */
+}
+
+.comment-section-title {
+    font-size: 1.50rem; /* 28px */
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 2rem; /* 32px */
+    /* text-align: center; */
+}
+
+/* 댓글 작성 폼 (Form) */
+.comment-form-article {
+    display: flex;
+    gap: 1.5rem; /* 24px */
+    margin-bottom: 2.5rem; /* 40px */
+}
+
+.comment-avatar-wrapper {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #d1d5db;
+}
+
+.comment-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comment-input-wrapper {
+    flex-grow: 1;
+}
+
+.comment-textarea-wrapper {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.comment-textarea {
+    width: 95%;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    background-color: #ffffff;
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.comment-textarea:focus {
+    outline: none;
+    border-color: #4f46e5; /* indigo-600 */
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); /* ring-indigo-500 */
+}
+
+/* 이미지 미리보기 */
+.image-preview-wrapper {
+    position: relative;
+    margin-top: 1rem;
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.image-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.remove-image-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.remove-image-button:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* 폼 액션 버튼들 (사진 추가, 댓글 작성) */
+.comment-form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.image-upload-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem; /* 14px */
+    font-weight: 600;
+    color: #6b7280; /* gray-500 */
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.image-upload-label:hover {
+    color: #4b5563; /* gray-600 */
+}
+
+.comment-submit-button {
+    padding: 0.75rem 1.5rem; /* 12px 24px */
+    background-color: #4f46e5; /* indigo-600 */
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.comment-submit-button:hover {
+    background-color: #4338ca; /* indigo-700 */
+    transform: translateY(-1px);
+}
+
+.comment-submit-button:disabled {
+    background-color: #9ca3af; /* gray-400 */
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 댓글 목록 */
+.comments-list {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* 24px */
+}
+
+/* 개별 댓글 아이템 */
+.comment-item {
+    background-color:  rgba(255,255,255,0.1);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.comment-author-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.875rem; /* 14px */
+}
+
+.author-name {
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.comment-date {
+    color: #6b7280;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.comment-action-button {
+    background-color: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.comment-action-button:hover {
+    background-color: #e5e7eb;
+    color: #1f2937;
+}
+
+.comment-content-body {
+    margin-top: 1rem;
+    line-height: 1.6;
+    color: #374151;
+}
+
+.comment-text {
+    font-size: 1rem;
+}
+
+.comment-image-wrapper {
+    max-width: 100%;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.comment-image {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}

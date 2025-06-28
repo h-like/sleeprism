@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CommentCreateRequestDTO, CommentResponseDTO, ImageUploadResponse } from '../type/comment';
-// import { CommentResponseDTO, CommentCreateRequestDTO, ImageUploadResponse } from '../types/comment'; // DTO 인터페이스 임포트
+import '../../public/css/CommentSection.css'; // 새로 생성할 CSS 파일 임포트
 
 // JWT 토큰에서 사용자 ID를 디코딩하는 헬퍼 함수 (PostDetailPage와 동일)
 const getUserIdFromToken = (): number | null => {
@@ -13,15 +13,20 @@ const getUserIdFromToken = (): number | null => {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join('')
+    );
     const decodedToken = JSON.parse(jsonPayload);
     const userIdRaw = decodedToken.userId || decodedToken.id || decodedToken.sub;
     const userId = typeof userIdRaw === 'number' ? userIdRaw : parseInt(userIdRaw as string, 10);
     return isNaN(userId) ? null : userId;
   } catch (e) {
-    console.error("JWT 토큰 디코딩 중 오류 발생:", e);
+    console.error('JWT 토큰 디코딩 중 오류 발생:', e);
     return null;
   }
 };
@@ -54,10 +59,12 @@ function CommentSection({ postId }: CommentSectionProps) {
       }
       const data: CommentResponseDTO[] = await response.json();
       // 최신 댓글이 위에 오도록 정렬 (선택 사항, 백엔드에서 정렬해도 됨)
-      setComments(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setComments(
+        data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      );
     } catch (e: any) {
-      console.error("댓글 목록 가져오기 오류:", e);
-      setError(e.message || "댓글을 불러오는데 실패했습니다.");
+      console.error('댓글 목록 가져오기 오류:', e);
+      setError(e.message || '댓글을 불러오는데 실패했습니다.');
     } finally {
       setLoadingComments(false);
     }
@@ -122,7 +129,7 @@ function CommentSection({ postId }: CommentSectionProps) {
         const uploadResponse = await fetch('http://localhost:8080/api/posts/upload-image', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`, // 이미지 업로드도 인증 필요
+            Authorization: `Bearer ${token}`, // 이미지 업로드도 인증 필요
             // 'Content-Type': 'multipart/form-data' 헤더는 FormData 사용 시 자동으로 설정됩니다.
           },
           body: formData,
@@ -151,7 +158,7 @@ function CommentSection({ postId }: CommentSectionProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(commentRequest),
       });
@@ -169,7 +176,6 @@ function CommentSection({ postId }: CommentSectionProps) {
 
       fetchComments(); // 댓글 목록 새로고침
       alert('댓글이 성공적으로 작성되었습니다!');
-
     } catch (e: any) {
       console.error('댓글 작성 또는 이미지 업로드 중 오류 발생:', e);
       setError(e.message || '댓글 작성 중 알 수 없는 오류가 발생했습니다.');
@@ -201,7 +207,7 @@ function CommentSection({ postId }: CommentSectionProps) {
       const response = await fetch(`http://localhost:8080/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -219,115 +225,122 @@ function CommentSection({ postId }: CommentSectionProps) {
   };
 
   return (
-    <div className="mt-12 p-6 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
-      <h2 className="text-2xl font-semibold text-gray-700 mb-6">댓글</h2>
+   
+    <div className="comment-section-container">
+      <h3 className="comment-section-title">댓글 ({comments.length})</h3>
 
       {/* 댓글 작성 폼 */}
-      <form onSubmit={handleCommentSubmit} className="space-y-4 mb-8">
-        <div>
-          <label htmlFor="commentContent" className="sr-only">댓글 내용</label>
-          <textarea
-            id="commentContent"
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-            rows={3}
-            placeholder="댓글을 작성하세요."
-            value={newCommentContent}
-            onChange={(e) => setNewCommentContent(e.target.value)}
-          ></textarea>
+      <article className="comment-form-article">
+        <div className="comment-avatar-wrapper">
+          {/* 아바타 이미지 (고정 또는 동적) */}
+          <img className="comment-avatar" src="https://via.placeholder.com/48" alt="작성자 아바타" />
         </div>
-        
-        {/* 이미지 첨부 필드 */}
-        <div className="flex items-center space-x-4">
-          <label htmlFor="commentImage" className="cursor-pointer px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200">
-            이미지 첨부 (1장)
-          </label>
-          <input
-            type="file"
-            id="commentImage"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            accept="image/*" // 이미지 파일만 선택 가능
-            className="hidden" // 실제 input은 숨김
-          />
-          {newCommentImageUrl && (
-            <div className="relative w-24 h-24 border border-gray-300 rounded-md overflow-hidden">
-              <img src={newCommentImageUrl} alt="첨부 이미지 미리보기" className="w-full h-full object-cover" />
+        <div className="comment-input-wrapper">
+          <form onSubmit={handleCommentSubmit}>
+            <div className="comment-textarea-wrapper">
+              <textarea
+                id="commentContent"
+                className="comment-textarea"
+                rows={3}
+                placeholder="댓글을 작성하세요."
+                value={newCommentContent}
+                onChange={(e) => setNewCommentContent(e.target.value)}
+                required
+              ></textarea>
+              {/* 이미지 미리보기 */}
+              {newCommentImageUrl && (
+                <div className="image-preview-wrapper">
+                  <img src={newCommentImageUrl} alt="첨부 이미지 미리보기" className="image-preview" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewCommentImageFile(null);
+                      setNewCommentImageUrl(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="remove-image-button"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="comment-form-actions">
+              <label htmlFor="commentImage" className="image-upload-label">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <span>사진 추가</span>
+              </label>
+              <input
+                type="file"
+                id="commentImage"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                accept="image/*"
+                className="hidden"
+              />
               <button
-                type="button"
-                onClick={() => {
-                  setNewCommentImageFile(null);
-                  setNewCommentImageUrl(null);
-                  if (fileInputRef.current) fileInputRef.current.value = '';
-                }}
-                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs leading-none"
+                type="submit"
+                disabled={submittingComment}
+                className="comment-submit-button"
               >
-                X
+                {submittingComment ? '작성 중...' : '댓글 작성'}
               </button>
             </div>
-          )}
-          {newCommentImageFile && <span className="text-sm text-gray-600">{newCommentImageFile.name}</span>}
+          </form>
         </div>
-
-        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={submittingComment}
-          className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-md shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {submittingComment ? '댓글 작성 중...' : '댓글 작성'}
-        </button>
-      </form>
+      </article>
 
       {/* 댓글 목록 */}
       {loadingComments ? (
-        <p className="text-center text-gray-600">댓글을 불러오는 중...</p>
+        <p className="text-center text-gray-600 mt-8">댓글을 불러오는 중...</p>
       ) : comments.length === 0 ? (
-        <p className="text-center text-gray-600">아직 댓글이 없습니다.</p>
+        <p className="text-center text-gray-600 mt-8">아직 댓글이 없습니다.</p>
       ) : (
-        <div className="space-y-6">
+        <div className="comments-list">
           {comments.map((comment) => (
-            <div key={comment.id} className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
-              <div className="flex justify-between items-start mb-2">
-                <p className="text-gray-800 font-semibold">{comment.authorNickname}</p>
-                <div className="text-sm text-gray-500">
-                  {new Date(comment.createdAt).toLocaleString()}
+            <article key={comment.id} className="comment-item">
+              <footer className="comment-header">
+                <div className="comment-author-info">
+                  <p className="author-name">{comment.authorNickname}</p>
+                  <p className="comment-date">
+                    <time dateTime={comment.createdAt}>
+                      {new Date(comment.createdAt).toLocaleString()}
+                    </time>
+                  </p>
                 </div>
+                {/* 본인 댓글에만 수정/삭제 버튼 표시 */}
+                {currentUserId !== null && comment.originalAuthorId === currentUserId && (
+                  <div className="comment-actions">
+                    <button
+                      onClick={() => handleCommentEdit(comment.id)}
+                      className="comment-action-button"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 3 3"/></svg>
+                      <span className="sr-only">수정</span>
+                    </button>
+                    <button
+                      onClick={() => handleCommentDelete(comment.id)}
+                      className="comment-action-button"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                      <span className="sr-only">삭제</span>
+                    </button>
+                  </div>
+                )}
+              </footer>
+              <div className="comment-content-body">
+                {comment.attachmentUrl && (
+                  <div className="comment-image-wrapper">
+                    <img
+                      src={`http://localhost:8080/${comment.attachmentUrl}`}
+                      alt="첨부 이미지"
+                      className="comment-image"
+                    />
+                  </div>
+                )}
+                <p className="comment-text">{comment.content}</p>
               </div>
-              
-              {/* 이미지/GIF 먼저 표시 */}
-              {comment.attachmentUrl && (
-                <div className="mb-4">
-                  <img 
-                    src={`http://localhost:8080/${comment.attachmentUrl}`} // 백엔드 URL과 Context Path 결합
-                    alt="첨부 이미지" 
-                    className="max-w-xs sm:max-w-sm lg:max-w-md h-auto rounded-md shadow-md"
-                  />
-                </div>
-              )}
-
-              <p className="text-gray-700 leading-relaxed mb-4">{comment.content}</p>
-
-              {/* 본인 댓글에만 수정/삭제 버튼 표시 */}
-              {currentUserId !== null && comment.originalAuthorId === currentUserId && (
-                <div className="flex space-x-3 text-sm">
-                  <button
-                    onClick={() => handleCommentEdit(comment.id)}
-                    className="text-blue-600 hover:underline flex items-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil mr-1"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 3 3"/></svg>
-                    수정
-                  </button>
-                  <button
-                    onClick={() => handleCommentDelete(comment.id)}
-                    className="text-red-600 hover:underline flex items-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2 mr-1"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                    삭제
-                  </button>
-                </div>
-              )}
-            </div>
+            </article>
           ))}
         </div>
       )}

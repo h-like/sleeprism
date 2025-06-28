@@ -1,0 +1,309 @@
+/* 전체 컨테이너: 몽환적인 배경 */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    font-family: 'Inter', sans-serif; /* Tailwind 기본 폰트와 유사 */
+    background: linear-gradient(135deg, #1e3a8a, #4c1d95, #6d28d9); /* 깊은 보라색/남색 그라데이션 */
+    position: relative; /* 의사 요소를 위한 위치 기준 */
+    overflow: hidden; /* 배경의 원형 요소를 숨김 */
+}
+
+/* 배경의 몽환적인 효과를 위한 의사 요소 */
+.login-container::before,
+.login-container::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1); /* 투명한 흰색 */
+    filter: blur(80px); /* 매우 부드러운 블러 효과 */
+    opacity: 0.7;
+}
+
+.login-container::before {
+    width: 300px;
+    height: 300px;
+    top: 10%;
+    left: 20%;
+    animation: float1 10s ease-in-out infinite alternate;
+}
+
+.login-container::after {
+    width: 400px;
+    height: 400px;
+    bottom: 15%;
+    right: 25%;
+    animation: float2 12s ease-in-out infinite alternate-reverse;
+}
+
+/* 떠다니는 배경 효과 애니메이션 */
+@keyframes float1 {
+    from {
+        transform: translate(0, 0);
+    }
+    to {
+        transform: translate(30px, 50px);
+    }
+}
+
+@keyframes float2 {
+    from {
+        transform: translate(0, 0);
+    }
+    to {
+        transform: translate(-40px, -60px);
+    }
+}
+
+/* 로그인 카드 (유리판 효과) */
+.login-card {
+    margin-top: 120px;
+    max-width: 450px;
+    width: 100%;
+    padding: 3rem;
+    border-radius: 2rem;
+    background: rgba(229, 199, 237, 0.07); /* 투명한 배경 */
+    border: 1px solid rgba(229, 199, 237, 0.24); /* 투명한 테두리 */
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); /* 깊이감을 주는 그림자 */
+    backdrop-filter: blur(10px); /* 핵심적인 유리판 블러 효과 */
+    -webkit-backdrop-filter: blur(10px); /* Safari 지원 */
+    color: #e2e8f0; /* 밝은 회색 텍스트 */
+    position: relative; /* z-index를 위한 위치 기준 */
+    z-index: 10;
+}
+
+/* 기본 로그인 타이틀 스타일 */
+.login-title {
+  text-align: center;
+  font-size: 2.5rem; /* 4xl */
+  font-weight: 800; /* font-extrabold */
+  margin-bottom: 2rem; /* mb-8 */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 다크 모드 텍스트 색상 */
+body.dark-mode .login-title {
+  color: #f1f1f1;
+}
+
+/* 라이트 모드 텍스트 색상 */
+body.light-mode .login-title  {
+  color: #17171b;
+}
+
+
+/* 다크 모드 텍스트 색상 */
+body.dark-mode .text-1 {
+  color: #ffffff;
+}
+
+/* 라이트 모드 텍스트 색상 */
+body.light-mode .text-1  {
+  color: #1a202c;
+}
+
+/* 다크 모드 이메일 주소, 비밀번호 텍스트 색상 */
+body.dark-mode .sr-only  {
+  color: #faf9f6;
+}
+
+/* 라이트  모드 이메일 주소, 비밀번호 색상 */
+body.light-mode .sr-only  {
+  color: #333;
+}
+
+
+/* 폼 컨테이너 */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* space-y-6 */
+}
+
+/* 입력 필드 */
+.login-input {
+    appearance: none;
+    border-radius: 0.5rem; /* rounded-md */
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1rem; /* px-3 py-2 */
+    border: 1px solid rgba(255, 255, 255, 0.4); /* 테두리 색상 변경 */
+    background: rgba(255, 255, 255, 0.1); /* 입력 필드 투명 배경 */
+    font-size: 0.875rem; /* sm:text-sm */
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+body.dark-mode .login-input::placeholder {
+    color: rgba(255, 255, 255, 0.6); /* 플레이스홀더 텍스트 색상 */
+}
+
+.login-input:focus {
+    border-color: #a78bfa; /* 보라색 테두리 */
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.5); /* 보라색 포커스 링 */
+    z-index: 10;
+}
+
+body.light-mode .login-input {
+     color: #1a202c;
+}
+body.dark-mode .login-input {
+color: #faf9f6;
+}
+
+/* 에러 메시지 */
+.login-error-message {
+    margin-top: 0.5rem;
+    text-align: center;
+    font-size: 0.875rem; /* text-sm */
+    color: #fca5a5; /* 밝은 빨간색 */
+}
+
+/* 로그인 버튼 */
+.login-button {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 0.75rem 1rem; /* py-2 px-4 */
+    border: none;
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* font-medium */
+    border-radius: 0.5rem; /* rounded-md */
+    color: #ffffff;
+    background: linear-gradient(90deg, #8b5cf6, #4f46e5); /* Tailwind의 purple-600 to indigo-600 */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    transform: scale(1);
+    outline: none;
+}
+
+.login-button:hover:not(:disabled) {
+    background: linear-gradient(90deg, #7c3aed, #4338ca); /* hover:from-purple-700 hover:to-indigo-700 */
+    transform: scale(1.03); /* transform hover:scale-105 */
+}
+
+.login-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: linear-gradient(90deg, #a78bfa, #818cf8); /* 비활성화 색상 */
+}
+
+/* 소셜 로그인 구분선 */
+.social-login-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 2rem 0 1.5rem;
+    font-size: 0.875rem;
+}
+
+/* 다크 모드 텍스트 색상 */
+body.dark-mode .social-login-divider {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 라이트 모드 텍스트 색상 */
+body.light-mode .social-login-divider {
+  color: #1a202c;
+}
+
+.social-login-divider::before,
+.social-login-divider::after {
+    content: '';
+    flex: 1;
+    margin: 0 0.5rem;
+}
+
+body.dark-mode .social-login-divider::before,
+body.dark-mode .social-login-divider::after {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+body.light-mode .social-login-divider::before,
+body.light-mode .social-login-divider::after {
+    border-bottom: 1px solid #1a202c;;
+}
+
+/* 소셜 로그인 버튼 컨테이너 */
+.social-login-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* 소셜 로그인 버튼 */
+.social-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    color: #333;
+    background-color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.social-button:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+.social-button .social-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 0.75rem;
+}
+
+/* 소셜 버튼별 스타일 */
+.social-button.google {
+    border-color: #ddd;
+    color: #555;
+}
+.social-button.naver {
+    background-color: #03c75a;
+    color: #fff;
+}
+.social-button.kakao {
+    background-color: #fee500;
+    color: #191919;
+}
+
+/* 회원가입 링크 */
+.login-register-link {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.register-link {
+    font-weight: 500;
+    color: #a78bfa; /* 보라색 */
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.register-link:hover {
+    color: #c4b5fd; /* 밝은 보라색 */
+    text-decoration: underline;
+}
+
+/* 모바일 뷰 */
+@media (max-width: 640px) {
+    .login-card {
+        padding: 2rem;
+        border-radius: 1.5rem;
+    }
+
+    .login-title {
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+}

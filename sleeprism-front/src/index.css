@@ -2,14 +2,14 @@
 
 /* 기본 라이트 모드 (light-mode 클래스 없어도 기본값으로 적용) */
 body {
-  background-color: #f7f7f7;
+  background: linear-gradient(135deg, #fdf2f8, #e4e0ff, #c8e7f7);
   color: #333;
   transition: background-color 0.3s, color 0.3s;
 }
 
 /* 다크 모드 스타일 */
 body.dark-mode {
-  background-color: #121212;
+  background-color: #0D0D0D;
   color: #e0e0e0;
 }
 
@@ -27,7 +27,7 @@ body.dark-mode {
 /* 기본 라이트 모드 스타일 */
 .main-container {
     /* background-color: #f3f4f6; */
-     background: linear-gradient(135deg, #fdf2f8, #e4e0ff, #c8e7f7);
+    background: linear-gradient(135deg, #fdf2f8, #e4e0ff, #c8e7f7);
     transition: background-color 0.3s;
 }
 
