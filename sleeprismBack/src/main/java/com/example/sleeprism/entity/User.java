@@ -41,6 +41,9 @@ public class User extends BaseTimeEntity implements UserDetails { // <-- BaseTim
   @Column(nullable = false, length = 50)
   private String nickname;
 
+  @Column(length = 50)
+  private String username;
+
   @Column(name = "profile_image_url", length = 500)
   private String profileImageUrl;
 

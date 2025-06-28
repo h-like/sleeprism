@@ -83,6 +83,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
           .password("social_login") // 소셜 로그인 사용자는 임시 비밀번호 설정
           .role(UserRole.USER) // 기본 역할 USER
           .socialId(socialId)
+          .username(nickname)
           .socialProvider(socialProvider)
           .profileImageUrl(profileImageUrl)
           .status(UserStatus.ACTIVE) // 기본 상태 ACTIVE

@@ -30,6 +30,9 @@ public class PostResponseDTO {
   private boolean isSellable;
   private boolean isSold;
 
+  private int likeCount;
+  private int commentCount;
+
   /**
    * Post 엔티티를 기반으로 PostResponseDTO 객체를 생성하는 생성자입니다.
    *
@@ -48,5 +51,8 @@ public class PostResponseDTO {
     this.updatedAt = post.getUpdatedAt();
     this.isSellable = post.isSellable();
     this.isSold = post.isSold();
+
+    this.likeCount = post.getLikes() != null ? post.getLikes().size() : 0;
+    this.commentCount = post.getComments() != null ? post.getComments().size() : 0;
   }
 }

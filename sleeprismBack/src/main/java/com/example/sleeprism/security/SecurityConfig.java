@@ -103,6 +103,8 @@ public class SecurityConfig implements WebSocketMessageBrokerConfigurer {
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/*", "/api/files/**", "/api/comments/post/*").permitAll()
             .requestMatchers("/", "/error", "/api/auth/**", "/api/users/signup", "/api/users/signin", "/oauth2/**", "/login/**", "/api/posts/files/**").permitAll()
+            .requestMatchers("/files/**").permitAll()
+            .requestMatchers("/api/users/profile").authenticated()
             .requestMatchers("/api/chats/**").authenticated()
             .requestMatchers("/admin/**").hasRole("ADMIN")
             .anyRequest().authenticated()

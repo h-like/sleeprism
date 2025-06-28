@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder; // SuperBuilder 임포트 추가
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -66,12 +68,10 @@ public class Post extends BaseTimeEntity { // BaseTimeEntity 상속
 
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-  @Builder.Default // @Builder.Default 추가
-  private List<Comment> comments = new ArrayList<>();
+  private Set<Comment> comments = new HashSet<>(); // FIX: List 대신 Set 사용
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-  @Builder.Default // @Builder.Default 추가
-  private List<PostLike> likes = new ArrayList<>();
+  private Set<PostLike> likes = new HashSet<>(); // FIX: List 대신 Set 사용
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default // @Builder.Default 추가
@@ -80,19 +80,6 @@ public class Post extends BaseTimeEntity { // BaseTimeEntity 상속
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default // @Builder.Default 추가
   private List<Attachment> attachments = new ArrayList<>();
-
-
-  // @SuperBuilder를 사용하므로 모든 필드를 포함하는 생성자가 자동으로 생성됩니다.
-  // 따라서 Builder 어노테이션이 붙은 이 생성자는 더 이상 필요하지 않습니다.
-  // 이 생성자를 삭제하는 것이 일반적입니다.
-  // @Builder
-  // public Post(User user, String title, String content, PostCategory category) {
-  //   this.originalAuthor = user;
-  //   this.currentOwner = user;
-  //   this.title = title;
-  //   this.content = content;
-  //   this.category = category;
-  // }
 
   // setOriginalAuthor, setCurrentOwner 메서드는 User 엔티티의 컬렉션 관리를 위해 필요했지만,
   // User 엔티티에서 @OneToMany(mappedBy="originalAuthor") 등으로 관계를 관리하므로 Post 측에서는 직접 List를 수정할 필요가 없습니다.

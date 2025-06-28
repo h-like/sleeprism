@@ -23,7 +23,7 @@ public class LoginLog extends BaseTimeEntity { // BaseTimeEntity 상속
   @Column(name = "user_id", nullable = false)
   private Long userId;
 
-  @Column(name = "login_time", nullable = false)
+  @Column(name = "login_timestamp", nullable = false)
   private LocalDateTime loginTime;
 
   @Column(name = "ip_address", length = 50)

@@ -24,11 +24,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
       "(LOWER(p.title) LIKE LOWER(CONCAT('%', :titleKeyword, '%')) OR " +
       "LOWER(p.content) LIKE LOWER(CONCAT('%', :contentKeyword, '%'))) " +
       "ORDER BY p.created_at DESC", // created_at 컬럼 이름 사용
-      nativeQuery = true) // <-- 네이티브 쿼리임을 명시
+      nativeQuery = true)
+  // <-- 네이티브 쿼리임을 명시
   List<Post> searchByTitleOrContentAndNotDeleted(
       @Param("titleKeyword") String titleKeyword,
       @Param("contentKeyword") String contentKeyword
   );
+
   // 3. 카테고리별 게시글 조회 (삭제되지 않은 게시글만)
   List<Post> findByCategoryAndIsDeletedFalseOrderByCreatedAtDesc(PostCategory category);
 
@@ -59,7 +61,16 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
   // FIX: 비관적 잠금을 적용한 findById 메서드 추가
   @Lock(LockModeType.PESSIMISTIC_WRITE) // 쓰기 잠금
-  @Query("select p from Post p where p.id = :id and p.isDeleted = false") // isDeleted 조건 추가
+  @Query("select p from Post p where p.id = :id and p.isDeleted = false")
+  // isDeleted 조건 추가
   Optional<Post> findById(@Param("id") Long id, LockModeType lockModeType);
+
+  // 방법 2a: comments만 fetch하고 likes는 Lazy 로딩
+  @Query("SELECT p FROM Post p LEFT JOIN FETCH p.comments WHERE p.isDeleted = false ORDER BY p.createdAt DESC")
+  List<Post> findByIsDeletedFalseOrderByCreatedAtDescFetchComments();
+
+  // 방법 2b: Likes만 fetch하고 comments는 Lazy 로딩 (필요에 따라)
+  @Query("SELECT p FROM Post p LEFT JOIN FETCH p.likes WHERE p.isDeleted = false ORDER BY p.createdAt DESC")
+  List<Post> findByIsDeletedFalseOrderByCreatedAtDescFetchLikes();
 
 }

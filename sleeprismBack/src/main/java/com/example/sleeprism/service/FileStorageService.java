@@ -1,4 +1,3 @@
-// src/main/java/com/example/sleeprism/service/FileStorageService.java
 package com.example.sleeprism.service;
 
 import org.springframework.core.io.Resource;
@@ -26,11 +25,18 @@ public interface FileStorageService {
   /**
    * 지정된 파일 URL에 해당하는 파일을 삭제합니다.
    *
-   * @param fileUrl 삭제할 파일의 URL (예: /files/profile-images/uuid.jpg) 파일
+   * @param fileUrl 삭제할 파일의 URL (예: /files/profile-images/uuid.jpg)
    */
   void deleteFile(String fileUrl);
 
-  void deleteImagesFromHtmlContent(String htmlContent); // FIX: HTML 내용에서 이미지 삭제하는 메서드 추가
+  /**
+   * HTML 내용에서 모든 <img> 태그의 src 속성을 파싱하여 해당 로컬 파일을 삭제합니다.
+   * 이 메서드는 특정 URL 패턴에 따라 파일을 삭제합니다.
+   *
+   * @param htmlContent 게시글의 HTML 내용
+   */
+  void deleteImagesFromHtmlContent(String htmlContent);
+
   /**
    * 지정된 상대 경로의 파일을 Spring Resource 객체로 로드합니다.
    *

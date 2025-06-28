@@ -104,8 +104,10 @@ public class PostService {
 
   // 모든 게시글 조회 (삭제되지 않은 게시글만) (변동 없음)
   public List<PostResponseDTO> getAllPosts() {
-    return postRepository.findByIsDeletedFalseOrderByCreatedAtDesc()
-        .stream()
+    // FIX: N+1 문제를 방지하기 위해 JOIN FETCH를 사용한 메서드 호출
+    List<Post> posts = postRepository.findByIsDeletedFalseOrderByCreatedAtDescFetchComments();
+    log.info("모든 게시글 조회 완료. 총 {}개의 게시글.", posts.size());
+    return posts.stream()
         .map(PostResponseDTO::new)
         .collect(Collectors.toList());
   }
