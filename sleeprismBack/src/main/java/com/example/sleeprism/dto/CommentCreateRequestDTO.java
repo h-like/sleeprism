@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.File;
+
 /**
  * 댓글 생성을 위한 요청 DTO (최상위 댓글 또는 대댓글)
  */
@@ -23,4 +25,7 @@ public class CommentCreateRequestDTO {
   // 첨부 파일 정보 (단일 파일)
   private String attachmentUrl; // 업로드된 파일의 URL
   private String attachmentType; // 파일의 MIME 타입
+
+  // **[새로 추가]** 프론트엔드에서 직접 전송하는 MultipartFile
+  private File attachmentFile;
 }

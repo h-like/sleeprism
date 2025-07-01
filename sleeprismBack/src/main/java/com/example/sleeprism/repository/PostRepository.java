@@ -2,10 +2,14 @@ package com.example.sleeprism.repository;
 
 import com.example.sleeprism.entity.Post;
 import com.example.sleeprism.entity.PostCategory;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,11 +26,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
       "(LOWER(p.title) LIKE LOWER(CONCAT('%', :titleKeyword, '%')) OR " +
       "LOWER(p.content) LIKE LOWER(CONCAT('%', :contentKeyword, '%'))) " +
       "ORDER BY p.created_at DESC", // created_at 컬럼 이름 사용
-      nativeQuery = true) // <-- 네이티브 쿼리임을 명시
+      nativeQuery = true)
+  // <-- 네이티브 쿼리임을 명시
   List<Post> searchByTitleOrContentAndNotDeleted(
       @Param("titleKeyword") String titleKeyword,
       @Param("contentKeyword") String contentKeyword
   );
+
   // 3. 카테고리별 게시글 조회 (삭제되지 않은 게시글만)
   List<Post> findByCategoryAndIsDeletedFalseOrderByCreatedAtDesc(PostCategory category);
 
@@ -54,4 +60,30 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
   // 10. 현재 소유자()로 게시글 조회 메서드 현재 소유자(currentOwner)로 게시글 조회 메서드
   List<Post> findByCurrentOwner_IdAndIsDeletedFalseOrderByCreatedAtDesc(Long userId); // <-- 이 부분을 추가!
+
+  // FIX: 비관적 잠금을 적용한 findById 메서드 추가
+  @Lock(LockModeType.PESSIMISTIC_WRITE) // 쓰기 잠금
+  @Query("select p from Post p where p.id = :id and p.isDeleted = false")
+  // isDeleted 조건 추가
+  Optional<Post> findById(@Param("id") Long id, LockModeType lockModeType);
+
+  // 방법 2a: comments만 fetch하고 likes는 Lazy 로딩
+  @Query("SELECT p FROM Post p LEFT JOIN FETCH p.comments WHERE p.isDeleted = false ORDER BY p.createdAt DESC")
+  List<Post> findByIsDeletedFalseOrderByCreatedAtDescFetchComments();
+
+  // 방법 2b: Likes만 fetch하고 comments는 Lazy 로딩 (필요에 따라)
+  @Query("SELECT p FROM Post p LEFT JOIN FETCH p.likes WHERE p.isDeleted = false ORDER BY p.createdAt DESC")
+  List<Post> findByIsDeletedFalseOrderByCreatedAtDescFetchLikes();
+
+  // 새롭게 추가: 여러 카테고리 목록으로 게시글 조회 (IN 쿼리)
+  List<Post> findByCategoryInAndIsDeletedFalseOrderByCreatedAtDesc(Collection<PostCategory> categories);
+
+  // 새로 추가: 인기 게시글 조회 (좋아요 수, 북마크 수, 조회수 내림차순)
+  // isDeleted = FALSE인 게시글만 가져오도록 명시적으로 조건 추가
+  List<Post> findByIsDeletedFalseOrderByLikeCountDescBookmarkCountDescViewCountDesc();
+
+  // 새로 추가: 특정 기간 내의 인기 게시글 조회
+  // isDeleted = FALSE이고 createdAt이 startDate와 endDate 사이인 게시글을
+  // 좋아요 수, 북마크 수, 조회수 순으로 내림차순 정렬
+  List<Post> findByIsDeletedFalseAndCreatedAtBetweenOrderByLikeCountDescBookmarkCountDescViewCountDesc(LocalDateTime startDate, LocalDateTime endDate);
 }

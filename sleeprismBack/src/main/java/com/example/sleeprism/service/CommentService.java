@@ -4,6 +4,7 @@ import com.example.sleeprism.dto.CommentCreateRequestDTO;
 import com.example.sleeprism.dto.CommentResponseDTO;
 import com.example.sleeprism.dto.CommentUpdateRequestDTO;
 import com.example.sleeprism.entity.Comment;
+import com.example.sleeprism.entity.NotificationType; // NotificationType import 추가
 import com.example.sleeprism.entity.Post;
 import com.example.sleeprism.entity.User;
 import com.example.sleeprism.repository.CommentRepository;
@@ -11,6 +12,7 @@ import com.example.sleeprism.repository.PostRepository;
 import com.example.sleeprism.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j; // Slf4j import 추가
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,22 +22,25 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j // 로그 추가
 public class CommentService {
 
   private final CommentRepository commentRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final FileStorageService fileStorageService; // 첨부 파일 관리를 위해 추가
+  private final NotificationService notificationService; // NotificationService 주입
 
   /**
    * 댓글을 생성합니다. (최상위 댓글 또는 대댓글)
+   * 댓글 생성 시, 게시글 작성자 또는 부모 댓글 작성자에게 알림을 생성합니다.
    * @param requestDto 댓글 생성 요청 DTO
    * @param userId 댓글 작성자 ID
    * @return 생성된 댓글 응답 DTO
    */
   @Transactional
   public CommentResponseDTO createComment(CommentCreateRequestDTO requestDto, Long userId) {
-    User user = userRepository.findById(userId)
+    User commentAuthor = userRepository.findById(userId) // 댓글 작성자
         .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
     Post post = postRepository.findByIdAndIsDeletedFalse(requestDto.getPostId())
         .orElseThrow(() -> new EntityNotFoundException("Post not found or deleted with ID: " + requestDto.getPostId()));
@@ -53,7 +58,7 @@ public class CommentService {
 
     Comment comment = Comment.builder()
         .post(post)
-        .user(user)
+        .user(commentAuthor) // 댓글 작성자 설정
         .content(requestDto.getContent())
         .parent(parentComment)
         .attachmentUrl(requestDto.getAttachmentUrl()) // 첨부 파일 URL
@@ -62,12 +67,36 @@ public class CommentService {
 
     // 양방향 관계 설정 (Post, User, ParentComment)
     comment.setPost(post);
-    comment.setUser(user);
+    comment.setUser(commentAuthor);
     if (parentComment != null) {
       comment.setParent(parentComment);
     }
 
     Comment savedComment = commentRepository.save(comment);
+
+    // --- 알림 생성 로직 추가 ---
+    // 1. 게시글 작성자에게 새 댓글 알림
+    User postAuthor = post.getOriginalAuthor();
+    if (!postAuthor.getId().equals(commentAuthor.getId())) { // 댓글 작성자와 게시글 작성자가 다를 경우에만 알림
+      String message = String.format("'%s'님이 회원님의 게시글 '%s'에 새 댓글을 남겼습니다.",
+          commentAuthor.getNickname(), post.getTitle());
+      String redirectPath = String.format("/posts/%d#comment-%d", post.getId(), savedComment.getId());
+      notificationService.createNotification(postAuthor, NotificationType.COMMENT, message,
+          "Post", post.getId(), redirectPath);
+      log.info("COMMENT notification sent to post author (User ID: {}) for Post ID: {}", postAuthor.getId(), post.getId());
+    }
+
+    // 2. 부모 댓글 작성자에게 대댓글 알림 (대댓글인 경우에만)
+    if (parentComment != null && !parentComment.getUser().getId().equals(commentAuthor.getId())) { // 대댓글이고 작성자가 부모 댓글 작성자와 다를 경우에만 알림
+      String message = String.format("'%s'님이 회원님의 댓글에 대댓글을 남겼습니다: '%s'",
+          commentAuthor.getNickname(), savedComment.getContent().substring(0, Math.min(savedComment.getContent().length(), 20)) + "..."); // 메시지 길이 제한
+      String redirectPath = String.format("/posts/%d#comment-%d", post.getId(), savedComment.getId());
+      notificationService.createNotification(parentComment.getUser(), NotificationType.REPLY_COMMENT, message,
+          "Comment", parentComment.getId(), redirectPath);
+      log.info("REPLY_COMMENT notification sent to parent comment author (User ID: {}) for Comment ID: {}", parentComment.getUser().getId(), parentComment.getId());
+    }
+    // --- 알림 생성 로직 끝 ---
+
     return new CommentResponseDTO(savedComment);
   }
 
@@ -77,9 +106,6 @@ public class CommentService {
    * @return 댓글 목록 DTO
    */
   public List<CommentResponseDTO> getCommentsByPostId(Long postId) {
-    // 최상위 댓글만 조회하고, @OneToMany 관계를 통해 대댓글들이 N+1 문제 없이 로드되도록 Fetch Join 또는 BatchSize 설정 필요
-    // (현재는 Comment 엔티티의 fetch type이 LAZY이므로, N+1 문제가 발생할 수 있습니다.
-    // 이를 해결하려면 JPQL @Query를 사용하거나 application.yml에 default-batch-fetch-size 설정)
     List<Comment> topLevelComments = commentRepository.findByPost_IdAndParentIsNullAndIsDeletedFalseOrderByCreatedAtDesc(postId);
     return topLevelComments.stream()
         .map(comment -> new CommentResponseDTO(comment, false)) // 삭제된 댓글 내용은 숨김
@@ -127,8 +153,6 @@ public class CommentService {
     }
 
     comment.update(requestDto.getContent(), updatedAttachmentUrl, updatedAttachmentType);
-    // commentRepository.save(comment); // 변경 감지로 자동 저장
-
     return new CommentResponseDTO(comment);
   }
 
@@ -153,7 +177,6 @@ public class CommentService {
     }
 
     comment.delete(); // isDeleted를 true로 변경
-    // commentRepository.save(comment); // 변경 감지로 자동 저장
   }
 
   /**

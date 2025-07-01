@@ -5,6 +5,8 @@ import com.example.sleeprism.dto.CommentResponseDTO;
 import com.example.sleeprism.dto.CommentUpdateRequestDTO;
 import com.example.sleeprism.entity.User;
 import com.example.sleeprism.service.CommentService;
+import com.example.sleeprism.service.FileStorageService;
+import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +18,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile; // 첨부 파일 업로드용
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -27,10 +28,7 @@ import java.util.Map;
 public class CommentController {
 
   private final CommentService commentService;
-  // CommentController에서 직접 파일을 업로드하지 않고,
-  // FileStorageService를 통해 파일 URL을 받을 수 있도록 분리하는 것이 좋습니다.
-  // 만약 댓글과 함께 파일을 직접 업로드하려면 FileStorageService 또는 AttachmentService 주입 필요.
-  // 현재는 CommentCreateRequestDTO에 attachmentUrl이 직접 포함되는 것을 전제합니다.
+  private final FileStorageService fileStorageService;
 
   // UserDetails에서 userId를 추출하는 헬퍼 메서드 (중복 코드를 줄이기 위해 별도의 유틸리티 클래스로 분리 권장)
   private Long extractUserIdFromUserDetails(UserDetails userDetails) {
@@ -41,19 +39,37 @@ public class CommentController {
   }
 
   /**
-   * 새로운 댓글을 생성합니다. (최상위 댓글 또는 대댓글)
+   * 새로운 댓글을 생성합니다. (최상위 댓글 또는 대댓글, 첨부 파일 포함 가능)
    *
-   * @param requestDto 댓글 생성 요청 DTO (postId, parentCommentId, content, attachmentUrl, attachmentType)
+   * @param requestDto 댓글 생성 요청 DTO (postId, parentCommentId, content)
+   * @param attachmentFile 댓글에 첨부할 MultipartFile (선택 사항)
    * @param userDetails 현재 로그인한 사용자 정보
    * @return 생성된 댓글 정보 DTO
    */
-  @PostMapping
+  @PostMapping(consumes = {"multipart/form-data"}) // <-- consumes 타입 변경
   public ResponseEntity<CommentResponseDTO> createComment(
-      @Valid @RequestBody CommentCreateRequestDTO requestDto,
+      @RequestPart("requestDto") @Valid CommentCreateRequestDTO requestDto, // <-- @RequestPart로 변경
+      @RequestPart(value = "attachmentFile", required = false) MultipartFile attachmentFile, // <-- 파일 파트 추가
       @AuthenticationPrincipal UserDetails userDetails
   ) {
     try {
       Long userId = extractUserIdFromUserDetails(userDetails);
+
+      String uploadedAttachmentUrl = null;
+      String uploadedAttachmentType = null;
+
+      // 파일 업로드가 있는 경우 LocalStorageService의 전용 메서드를 호출
+      if (attachmentFile != null && !attachmentFile.isEmpty()) {
+        uploadedAttachmentUrl = fileStorageService.uploadCommentAttachment(attachmentFile); // <-- 이 메서드 사용
+        uploadedAttachmentType = attachmentFile.getContentType() != null && attachmentFile.getContentType().startsWith("image/") ? "IMAGE" : "FILE"; // 간단한 타입 설정
+
+        log.info("댓글 첨부 파일 업로드 완료. URL: {}", uploadedAttachmentUrl);
+      }
+
+      // DTO에 업로드된 파일 정보 설정 (service로 전달하기 위함)
+      requestDto.setAttachmentUrl(uploadedAttachmentUrl);
+      requestDto.setAttachmentType(uploadedAttachmentType);
+
       CommentResponseDTO responseDTO = commentService.createComment(requestDto, userId);
       log.info("Comment created successfully. Comment ID: {}", responseDTO.getId());
       return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
@@ -63,6 +79,9 @@ public class CommentController {
     } catch (IllegalArgumentException e) {
       log.error("Error creating comment: Invalid argument. {}", e.getMessage());
       return ResponseEntity.badRequest().body(null); // 400 Bad Request (2단계 대댓글 시도 등)
+    } catch (IOException e) { // 파일 업로드 시 발생할 수 있는 IOException 처리
+      log.error("Failed to upload comment attachment: {}", e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
     } catch (Exception e) {
       log.error("An unexpected error occurred while creating comment: {}", e.getMessage(), e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500 Internal Server Error

@@ -24,6 +24,7 @@ public class CommentResponseDTO {
   private Long postId;
   private Long authorId;
   private String authorNickname; // 작성자 닉네임
+  private String authorProfileImageUrl;
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
   private Long parentCommentId; // 부모 댓글 ID
@@ -32,6 +33,7 @@ public class CommentResponseDTO {
   // 첨부 파일 정보
   private String attachmentUrl;
   private String attachmentType;
+
 
   private List<CommentResponseDTO> children; // 대댓글 목록
 
@@ -42,6 +44,7 @@ public class CommentResponseDTO {
     this.postId = comment.getPost().getId();
     this.authorId = comment.getUser().getId();
     this.authorNickname = comment.getUser().getNickname(); // User 엔티티에 getNickname() 있다고 가정
+    this.authorProfileImageUrl = comment.getUser().getProfileImageUrl();
     this.createdAt = comment.getCreatedAt();
     this.updatedAt = comment.getUpdatedAt();
     this.parentCommentId = (comment.getParent() != null) ? comment.getParent().getId() : null;
@@ -63,6 +66,7 @@ public class CommentResponseDTO {
     this.postId = comment.getPost().getId();
     this.authorId = comment.getUser().getId();
     this.authorNickname = comment.getUser().getNickname();
+    this.authorProfileImageUrl = comment.getUser().getProfileImageUrl();
     this.createdAt = comment.getCreatedAt();
     this.updatedAt = comment.getUpdatedAt();
     this.parentCommentId = (comment.getParent() != null) ? comment.getParent().getId() : null;

@@ -5,7 +5,9 @@ import com.example.sleeprism.dto.PostResponseDTO;
 import com.example.sleeprism.dto.PostUpdateRequestDTO;
 import com.example.sleeprism.entity.PostCategory;
 import com.example.sleeprism.entity.User;
+import com.example.sleeprism.service.BookmarkService;
 import com.example.sleeprism.service.FileStorageService;
+import com.example.sleeprism.service.PostLikeService;
 import com.example.sleeprism.service.PostService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -31,6 +33,8 @@ import java.util.Map;
 public class PostController {
   private final PostService postService;
   private final FileStorageService fileStorageService;
+  private final PostLikeService postLikeService;
+  private final BookmarkService bookmarkService;
 
   // UserDetails에서 userId를 추출하는 헬퍼 메서드
   private Long extractUserIdFromUserDetails(UserDetails userDetails) {
@@ -115,18 +119,133 @@ public class PostController {
     return ResponseEntity.noContent().build(); // 204 No Content
   }
 
-  // 모든 게시글 조회
+  // 모든 게시글 또는 카테고리별 게시글 조회 통합 엔드포인트
   @GetMapping
-  public ResponseEntity<List<PostResponseDTO>> getAllPosts() {
-    List<PostResponseDTO> posts = postService.getAllPosts();
+  public ResponseEntity<List<PostResponseDTO>> getPosts(
+      @RequestParam(required = false) List<PostCategory> category) { // List<PostCategory>로 변경
+    List<PostResponseDTO> posts = postService.getPosts(category); // 서비스 호출도 List로 변경
     return ResponseEntity.ok(posts);
   }
 
-  // 카테고리별 게시글 조회
-  @GetMapping("/category/{category}")
-  public ResponseEntity<List<PostResponseDTO>> getPostsByCategory(@PathVariable PostCategory category) {
-    List<PostResponseDTO> posts = postService.getPostsByCategory(category);
-    return ResponseEntity.ok(posts);
+  // 게시글 좋아요/좋아요 취소 엔드포인트
+  @PostMapping("/{postId}/like")
+  public ResponseEntity<Map<String, Boolean>> toggleLike(
+      @PathVariable Long postId,
+      @AuthenticationPrincipal UserDetails userDetails
+  ) {
+    Long userId;
+    try {
+      userId = extractUserIdFromUserDetails(userDetails);
+    } catch (IllegalStateException e) {
+      log.error("Failed to extract user ID from UserDetails for like toggle: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401 Unauthorized
+    }
+
+    try {
+      boolean liked = postLikeService.togglePostLike(postId, userId);
+      return ResponseEntity.ok(Map.of("liked", liked)); // 좋아요 상태 반환
+    } catch (EntityNotFoundException e) {
+      log.error("게시글 또는 사용자를 찾을 수 없어 좋아요 토글 실패: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    } catch (Exception e) {
+      log.error("좋아요 토글 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  // 특정 게시글의 좋아요 상태 확인 엔드포인트
+  @GetMapping("/{postId}/like/status")
+  public ResponseEntity<Map<String, Boolean>> getLikeStatus(
+      @PathVariable Long postId,
+      @AuthenticationPrincipal UserDetails userDetails
+  ) {
+    Long userId;
+    try {
+      userId = extractUserIdFromUserDetails(userDetails);
+    } catch (IllegalStateException e) {
+      // 로그인하지 않은 사용자는 좋아요 상태를 알 수 없으므로 false 반환 또는 401
+      // 여기서는 401로 처리하여 로그인 필요함을 알림
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    try {
+      boolean isLiked = postLikeService.isPostLikedByUser(postId, userId);
+      return ResponseEntity.ok(Map.of("isLiked", isLiked));
+    } catch (EntityNotFoundException e) {
+      log.error("게시글 또는 사용자를 찾을 수 없어 좋아요 상태 확인 실패: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    } catch (Exception e) {
+      log.error("좋아요 상태 확인 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  // 게시글 북마크/북마크 취소 엔드포인트 추가
+  @PostMapping("/{postId}/bookmark")
+  public ResponseEntity<Map<String, Boolean>> toggleBookmark(
+      @PathVariable Long postId,
+      @AuthenticationPrincipal UserDetails userDetails
+  ) {
+    Long userId;
+    try {
+      userId = extractUserIdFromUserDetails(userDetails);
+    } catch (IllegalStateException e) {
+      log.error("Failed to extract user ID from UserDetails for bookmark toggle: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401 Unauthorized
+    }
+
+    try {
+      boolean bookmarked = bookmarkService.togglePostBookmark(postId, userId);
+      return ResponseEntity.ok(Map.of("bookmarked", bookmarked)); // 북마크 상태 반환
+    } catch (EntityNotFoundException e) {
+      log.error("게시글 또는 사용자를 찾을 수 없어 북마크 토글 실패: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    } catch (Exception e) {
+      log.error("북마크 토글 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  // 특정 게시글의 북마크 상태 확인 엔드포인트 추가
+  @GetMapping("/{postId}/bookmark/status")
+  public ResponseEntity<Map<String, Boolean>> getBookmarkStatus(
+      @PathVariable Long postId,
+      @AuthenticationPrincipal UserDetails userDetails
+  ) {
+    Long userId;
+    try {
+      userId = extractUserIdFromUserDetails(userDetails);
+    } catch (IllegalStateException e) {
+      // 로그인하지 않은 사용자는 북마크 상태를 알 수 없으므로 false 반환 또는 401
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    try {
+      boolean isBookmarked = bookmarkService.isPostBookmarkedByUser(postId, userId);
+      return ResponseEntity.ok(Map.of("isBookmarked", isBookmarked));
+    } catch (EntityNotFoundException e) {
+      log.error("게시글 또는 사용자를 찾을 수 없어 북마크 상태 확인 실패: {}", e.getMessage());
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    } catch (Exception e) {
+      log.error("북마크 상태 확인 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  // 인기 게시글 조회 엔드포인트 (기간 필터링 추가)
+  @GetMapping("/popular")
+  public ResponseEntity<List<PostResponseDTO>> getPopularPosts(
+      @RequestParam(required = false, defaultValue = "all_time") String period) { // 기간 파라미터 추가
+    try {
+      List<PostResponseDTO> popularPosts = postService.getPopularPosts(period); // 서비스 호출에 period 전달
+      return ResponseEntity.ok(popularPosts);
+    } catch (IllegalArgumentException e) {
+      log.error("유효하지 않은 기간 파라미터: {}", e.getMessage());
+      return ResponseEntity.badRequest().build(); // 400 Bad Request
+    } catch (Exception e) {
+      log.error("인기 게시글 조회 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
   // ==== Quill.js 이미지 업로드 및 파일 제공 엔드포인트 추가 ====

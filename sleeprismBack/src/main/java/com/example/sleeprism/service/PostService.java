@@ -6,61 +6,72 @@ import com.example.sleeprism.dto.PostUpdateRequestDTO;
 import com.example.sleeprism.entity.Post;
 import com.example.sleeprism.entity.PostCategory;
 import com.example.sleeprism.entity.User;
+import com.example.sleeprism.event.ViewCountIncrementEvent;
 import com.example.sleeprism.repository.PostRepository;
 import com.example.sleeprism.repository.UserRepository;
-import com.example.sleeprism.util.HtmlSanitizer; // 이 유틸리티 클래스가 존재한다고 가정
+import com.example.sleeprism.util.HtmlSanitizer;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Spring의 @Transactional 사용
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate; // TransactionTemplate 임포트 추가
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // 기본적으로 읽기 전용 트랜잭션, 쓰기 메서드에서 @Transactional 재선언
+@Transactional(readOnly = true)
+@Slf4j
 public class PostService {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
+  private final TransactionTemplate transactionTemplate; // TransactionTemplate 주입
 
-  // 게시글 생성
-  @Transactional // 쓰기 작업이므로 트랜잭션 필요
+  @Autowired // ApplicationEventPublisher 주입
+  private ApplicationEventPublisher eventPublisher;
+
+  // 게시글 생성 (변동 없음)
+  @Transactional
   public PostResponseDTO createPost(PostCreateRequestDTO requestDto, Long userId) {
-    // User 엔티티를 찾아와서 Post와 연결
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
-
-    // HTML Sanitization 적용
     String sanitizedContent = HtmlSanitizer.sanitize(requestDto.getContent());
-
     Post post = Post.builder()
-        .user(user) // Post 엔티티의 @Builder에서 user는 originalAuthor와 currentOwner 모두를 설정합니다.
+        .originalAuthor(user)
+        .currentOwner(user)
         .title(requestDto.getTitle())
         .content(sanitizedContent)
         .category(requestDto.getCategory())
         .build();
-
     Post savedPost = postRepository.save(post);
-    return new PostResponseDTO(savedPost); // DTO로 변환하여 반환
+    log.info("게시글 생성 완료: ID={}", savedPost.getId());
+    return new PostResponseDTO(savedPost);
   }
 
-  // 특정 게시글 조회 (조회수 증가)
-  @Transactional // 조회수 증가가 쓰기 작업이므로 트랜잭션 필요
   public PostResponseDTO getPostById(Long postId) {
     Post post = postRepository.findByIdAndIsDeletedFalse(postId)
         .orElseThrow(() -> new EntityNotFoundException("Post not found with ID: " + postId));
-    post.incrementViewCount(); // 조회수 증가
+
+    // 조회수 증가는 이벤트 발행으로 분리
+    eventPublisher.publishEvent(new ViewCountIncrementEvent(this, postId));
+
+    // 게시글 데이터만 반환 (조회수는 즉시 반영되지 않음)
     return new PostResponseDTO(post);
   }
 
-  // 게시글 수정
+  // 게시글 수정 (변동 없음)
   @Transactional
   public PostResponseDTO updatePost(Long postId, PostUpdateRequestDTO requestDto, Long userId) {
     Post post = postRepository.findByIdAndIsDeletedFalse(postId)
         .orElseThrow(() -> new EntityNotFoundException("Post not found with ID: " + postId));
 
-    // 게시글 수정 권한 검증: 원본 작성자만 수정 가능하며, 이미 판매된 게시글은 수정 불가
     if (!post.getOriginalAuthor().getId().equals(userId)) {
       throw new IllegalArgumentException("You do not have permission to update this post.");
     }
@@ -68,21 +79,17 @@ public class PostService {
       throw new IllegalStateException("Sold posts cannot be updated.");
     }
 
-    // HTML Sanitization 적용
     String sanitizedContent = HtmlSanitizer.sanitize(requestDto.getContent());
-
     post.update(requestDto.getTitle(), sanitizedContent, requestDto.getCategory());
-    // save를 명시적으로 호출하지 않아도 @Transactional에 의해 변경 감지(Dirty Checking) 후 업데이트됨
     return new PostResponseDTO(post);
   }
 
-  // 게시글 삭제 (소프트 삭제)
+  // 게시글 삭제 (소프트 삭제) (변동 없음)
   @Transactional
   public void deletePost(Long postId, Long userId) {
     Post post = postRepository.findByIdAndIsDeletedFalse(postId)
         .orElseThrow(() -> new EntityNotFoundException("Post not found with ID: " + postId));
 
-    // 게시글 삭제 권한 검증: 원본 작성자만 삭제 가능하며, 이미 판매된 게시글은 삭제 불가
     if (!post.getOriginalAuthor().getId().equals(userId)) {
       throw new IllegalArgumentException("You do not have permission to delete this post.");
     }
@@ -90,26 +97,70 @@ public class PostService {
       throw new IllegalStateException("Sold posts cannot be deleted.");
     }
 
-    post.delete(); // isDeleted를 true로 변경
-    // postRepository.save(post); // Dirty Checking으로 자동 저장될 수 있으나, 명시적으로 호출해도 무방
+    post.delete();
   }
 
-  // 모든 게시글 조회 (삭제되지 않은 게시글만)
-  public List<PostResponseDTO> getAllPosts() {
-    return postRepository.findByIsDeletedFalseOrderByCreatedAtDesc()
-        .stream()
+  // 모든 게시글 또는 카테고리별 게시글을 조회하는 통합 메서드
+  // 파라미터 타입을 List<PostCategory>로 변경합니다.
+  public List<PostResponseDTO> getPosts(List<PostCategory> categories) {
+    List<Post> posts;
+    // categories 리스트가 null이 아니거나 비어있지 않으면 카테고리 필터링
+    if (categories != null && !categories.isEmpty()) {
+      // findByCategoryInAndIsDeletedFalseOrderByCreatedAtDesc는 Collection을 인자로 받으므로 List를 그대로 전달 가능
+      posts = postRepository.findByCategoryInAndIsDeletedFalseOrderByCreatedAtDesc(categories);
+      log.info("{} 카테고리 게시글 조회 완료. 총 {}개의 게시글.", categories, posts.size());
+    } else {
+      // categories 리스트가 null이거나 비어있으면 모든 게시글 조회
+      posts = postRepository.findByIsDeletedFalseOrderByCreatedAtDescFetchComments();
+      log.info("모든 게시글 조회 완료. 총 {}개의 게시글.", posts.size());
+    }
+    return posts.stream()
         .map(PostResponseDTO::new)
         .collect(Collectors.toList());
   }
 
-  // 카테고리별 게시글 조회
-  public List<PostResponseDTO> getPostsByCategory(PostCategory category) {
-    return postRepository.findByCategoryAndIsDeletedFalseOrderByCreatedAtDesc(category)
-        .stream()
+  /**
+   * 인기 게시글을 조회합니다. (좋아요 수, 북마크 수, 조회수 순으로 정렬)
+   * 선택적 기간 필터링을 지원합니다.
+   *
+   * @param period 조회 기간 ("today", "week", "month", "all_time")
+   * @return 인기 게시글 목록
+   * @throws IllegalArgumentException 유효하지 않은 기간이 지정될 경우
+   */
+  public List<PostResponseDTO> getPopularPosts(String period) {
+    List<Post> popularPosts;
+    LocalDateTime startDate = null; // 시작 날짜
+    LocalDateTime endDate = LocalDateTime.now(); // 현재 시간 (종료 날짜는 항상 현재)
+
+    switch (period.toLowerCase()) {
+      case "today":
+        startDate = LocalDate.now().atStartOfDay(); // 오늘 자정
+        break;
+      case "week":
+        startDate = LocalDate.now().minusWeeks(1).atStartOfDay(); // 7일 전 자정
+        break;
+      case "month":
+        startDate = LocalDate.now().minusMonths(1).atStartOfDay(); // 한 달 전 자정
+        break;
+      case "all_time":
+        // startDate를 null로 유지하여 모든 기간 포함
+        break;
+      default:
+        throw new IllegalArgumentException("유효하지 않은 기간 파라미터입니다: " + period + ". 'today', 'week', 'month', 'all_time' 중 하나를 선택해주세요.");
+    }
+
+    if (startDate != null) {
+      // 특정 기간 내의 게시글을 필터링하여 조회 (좋아요, 북마크, 조회수 순 정렬)
+      popularPosts = postRepository.findByIsDeletedFalseAndCreatedAtBetweenOrderByLikeCountDescBookmarkCountDescViewCountDesc(startDate, endDate);
+      log.info("기간 '{}' 동안의 인기 게시글 조회 완료. 총 {}개의 게시글.", period, popularPosts.size());
+    } else {
+      // 모든 기간의 인기 게시글 조회
+      popularPosts = postRepository.findByIsDeletedFalseOrderByLikeCountDescBookmarkCountDescViewCountDesc();
+      log.info("모든 기간의 인기 게시글 조회 완료. 총 {}개의 게시글.", popularPosts.size());
+    }
+
+    return popularPosts.stream()
         .map(PostResponseDTO::new)
         .collect(Collectors.toList());
   }
-
-  // TODO: 검색, 인기 게시글 등의 추가 메서드 구현 (기존 PostService 로직과 동일하게 유지)
-
 }

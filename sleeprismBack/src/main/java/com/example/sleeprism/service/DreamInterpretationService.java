@@ -13,6 +13,7 @@ import com.example.sleeprism.repository.PostRepository;
 import com.example.sleeprism.repository.TarotCardRepository;
 import com.example.sleeprism.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -57,8 +58,9 @@ public class DreamInterpretationService {
 
   /**
    * AI (Google Gemini)를 사용하여 꿈 내용을 해몽하고, 결과를 저장하며, 타로 카드를 매칭합니다.
+   *
    * @param requestDto 해몽 요청 DTO (꿈 게시글 ID 포함)
-   * @param userId 해몽을 요청한 사용자 ID
+   * @param userId     해몽을 요청한 사용자 ID
    * @return 생성된 해몽 결과 DTO (여러 해몽 옵션 포함)
    */
   @Transactional
@@ -107,7 +109,8 @@ public class DreamInterpretationService {
       // example: {"interpretations": [{"title": "...", "content": "..."}, {"title": "...", "content": "..."}, ...]}
       Map<String, List<Map<String, String>>> aiResponseMap = objectMapper.readValue(
           aiResponseJson,
-          new com.fasterxml.jackson.core.type.TypeReference<Map<String, List<Map<String, String>>>>() {}
+          new com.fasterxml.jackson.core.type.TypeReference<Map<String, List<Map<String, String>>>>() {
+          }
       );
 
       List<Map<String, String>> interpretationsData = aiResponseMap.get("interpretations");
@@ -182,9 +185,10 @@ public class DreamInterpretationService {
 
   /**
    * 사용자가 AI가 제공한 해몽 옵션 중 하나를 최종적으로 선택하고 저장합니다.
+   *
    * @param interpretationId 해몽 기록 ID
-   * @param requestDto 선택된 옵션 정보 DTO
-   * @param userId 선택을 요청한 사용자 ID
+   * @param requestDto       선택된 옵션 정보 DTO
+   * @param userId           선택을 요청한 사용자 ID
    * @return 업데이트된 해몽 결과 DTO
    */
   @Transactional
@@ -215,8 +219,9 @@ public class DreamInterpretationService {
 
   /**
    * 특정 해몽 기록을 ID로 조회합니다.
+   *
    * @param interpretationId 해몽 기록 ID
-   * @param userId 조회 요청 사용자 ID
+   * @param userId           조회 요청 사용자 ID
    * @return 해몽 결과 DTO
    */
   public DreamInterpretationResponseDTO getDreamInterpretationById(Long interpretationId, Long userId) {
@@ -237,6 +242,7 @@ public class DreamInterpretationService {
 
   /**
    * 특정 사용자가 요청한 모든 해몽 기록을 조회합니다.
+   *
    * @param userId 사용자 ID
    * @return 해몽 결과 목록 DTO
    */
@@ -291,7 +297,8 @@ public class DreamInterpretationService {
         // Gemini 응답에서 "text" 필드만 추출 (generationConfig의 responseSchema를 통해 JSON 객체로 받아옴)
         // "text" 필드 안에 우리가 요청한 JSON 문자열이 담겨 있습니다.
         // 따라서 이 부분을 다시 파싱해야 합니다.
-        Map<String, Object> geminiRawResponse = objectMapper.readValue(response.toString(), Map.class);
+        Map<String, Object> geminiRawResponse = objectMapper.readValue(response.toString(), new TypeReference<Map<String, Object>>() {
+        });
         if (geminiRawResponse.containsKey("candidates")) {
           List<Map<String, Object>> candidates = (List<Map<String, Object>>) geminiRawResponse.get("candidates");
           if (!candidates.isEmpty() && candidates.get(0).containsKey("content")) {
@@ -323,6 +330,7 @@ public class DreamInterpretationService {
   // ======================================================================
   // PRIVATE HELPER METHOD for Tarot Card Initialization (for testing/demo)
   // ======================================================================
+
   /**
    * 애플리케이션 시작 시 타로 카드 데이터를 미리 DB에 추가하는 메서드 (개발/테스트용).
    * 실제 서비스에서는 관리자 페이지나 데이터 로딩 스크립트를 통해 데이터를 관리합니다.

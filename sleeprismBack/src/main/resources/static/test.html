@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebSocket Test</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #messages { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+    .connected { color: green; }
+    .disconnected { color: red; }
+  </style>
+</head>
+<body>
+<h1>WebSocket / STOMP Test</h1>
+<div id="status">Status: <span class="disconnected">Disconnected</span></div>
+<div>
+  <button id="connectBtn">Connect</button>
+  <button id="disconnectBtn" disabled>Disconnect</button>
+  <input type="text" id="messageInput" placeholder="Enter message" style="width: 200px;">
+  <button id="sendBtn" disabled>Send</button>
+</div>
+<div id="messages"></div>
+
+<script>
+  const WEBSOCKET_URL = 'http://localhost:8080/ws'; // 백엔드 설정에 맞게 변경
+  let stompClient = null;
+  const messagesDiv = document.getElementById('messages');
+  const statusSpan = document.getElementById('status').querySelector('span');
+  const connectBtn = document.getElementById('connectBtn');
+  const disconnectBtn = document.getElementById('disconnectBtn');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+
+  function appendMessage(text, color = 'black') {
+      const p = document.createElement('p');
+      p.style.color = color;
+      p.textContent = text;
+      messagesDiv.appendChild(p);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  function setConnected(connected) {
+      connectBtn.disabled = connected;
+      disconnectBtn.disabled = !connected;
+      messageInput.disabled = !connected;
+      sendBtn.disabled = !connected;
+      statusSpan.textContent = connected ? 'Connected' : 'Disconnected';
+      statusSpan.className = connected ? 'connected' : 'disconnected';
+  }
+
+  connectBtn.addEventListener('click', () => {
+      console.log("Attempting to connect...");
+      setConnected(false); // 연결 시도 중 상태
+
+      const socket = new SockJS(WEBSOCKET_URL);
+      stompClient = Stomp.over(socket);
+
+      // STOMP Debugging
+      stompClient.debug = function(str) {
+          console.log('STOMP Debug (HTML Test): ' + str);
+          // appendMessage('STOMP Debug: ' + str, 'gray'); // 너무 많은 로그가 찍힐 수 있어 주석 처리
+      };
+
+      const token = localStorage.getItem('jwtToken'); // 로컬 스토리지에서 JWT 토큰 가져오기
+      const headers = {};
+      if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+          console.log("Sending JWT Token in CONNECT header (HTML Test).");
+      } else {
+          console.warn("No JWT token found in localStorage for HTML test.");
+      }
+
+      stompClient.connect(headers, frame => {
+          console.log('Connected: ' + frame);
+          appendMessage('Connected to WebSocket!', 'green');
+          setConnected(true);
+
+          // 채팅방 토픽 구독 (예시: /topic/chat/room/1)
+          // 실제 채팅방 ID를 사용해야 합니다.
+          const chatRoomId = 1; // 테스트할 채팅방 ID
+          stompClient.subscribe(`/topic/chat/room/${chatRoomId}`, message => {
+              console.log("Received message from topic:", message.body);
+              appendMessage(`Topic Message: ${message.body}`, 'blue');
+          });
+
+          // 개인 에러 큐 구독 (User ID를 JWT 토큰에서 파싱해야 함)
+          // 여기서는 간단히 7번 사용자 ID로 가정합니다. 실제로는 JWT 파싱 필요.
+          const userId = 7; // JWT 토큰에서 실제 user ID를 추출하도록 변경 필요
+          stompClient.subscribe(`/user/${userId}/queue/errors`, message => {
+              console.error("Received error from user queue:", message.body);
+              appendMessage(`ERROR: ${message.body}`, 'red');
+          });
+
+      }, error => {
+          console.error('STOMP Error (HTML Test): ' + error);
+          appendMessage('Connection Error: ' + error, 'red');
+          setConnected(false);
+          stompClient = null; // 오류 발생 시 클라이언트 초기화
+      });
+
+      socket.onclose = (event) => {
+          console.warn('SockJS closed (HTML Test):', event);
+          appendMessage('WebSocket connection closed.', 'orange');
+          setConnected(false);
+          stompClient = null; // 소켓 닫히면 클라이언트 초기화
+      };
+
+      socket.onerror = (event) => {
+          console.error('SockJS error (HTML Test):', event);
+          appendMessage('WebSocket error occurred.', 'red');
+      };
+  });
+
+  disconnectBtn.addEventListener('click', () => {
+      if (stompClient !== null) {
+          stompClient.disconnect(() => {
+              console.log("Disconnected from WebSocket.");
+              appendMessage('Disconnected from WebSocket.', 'orange');
+              setConnected(false);
+              stompClient = null;
+          });
+      }
+  });
+
+  sendBtn.addEventListener('click', () => {
+      if (stompClient && stompClient.connected) { // stompClient.connected 대신 stompClient.active 사용 권장 (stompjs v5+)
+          const message = messageInput.value.trim();
+          if (message) {
+              const chatRoomId = 1; // 테스트할 채팅방 ID
+              const senderId = 7; // 실제 사용자 ID (로그인한 사용자 ID)
+              const senderNickname = "테스트유저"; // 실제 닉네임
+
+              const payload = {
+                  chatRoomId: chatRoomId,
+                  content: message,
+                  senderId: senderId,
+                  senderNickname: senderNickname,
+                  // 기타 필드 (예: sentAt 등)는 백엔드에서 생성하도록 할 수 있습니다.
+              };
+              // 목적지 확인: /app 접두사 사용
+              stompClient.send("/app/chat.sendMessage", { 'content-type': 'application/json' }, JSON.stringify(payload));
+              appendMessage(`Sent: ${message}`, 'purple');
+              messageInput.value = '';
+          }
+      } else {
+          appendMessage('Not connected to send message.', 'red');
+      }
+  });
+</script>
+</body>
+</html>
+   

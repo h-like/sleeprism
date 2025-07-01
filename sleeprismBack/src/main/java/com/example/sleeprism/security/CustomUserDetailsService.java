@@ -14,9 +14,16 @@ public class CustomUserDetailsService implements UserDetailsService {
 
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-    // 데이터베이스에서 사용자 이름(username), 즉 이메일로 사용자 정보를 조회하고
-    // UserDetails를 구현한 User 엔티티를 바로 반환합니다.
-    return userRepository.findByEmail(username) // findByEmail로 User 엔티티를 가져옴
-        .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username));
+    // 주의: username 매개변수가 실제로는 사용자 ID(Long 타입)라고 가정합니다.
+    // JWT 토큰의 subject에 사용자 ID가 들어있는 경우 이 방식을 사용합니다.
+    try {
+      Long userId = Long.parseLong(username); // String으로 넘어온 username을 Long으로 변환
+      return userRepository.findById(userId) // 사용자 ID로 User 엔티티 조회
+          .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username));
+    } catch (NumberFormatException e) {
+      // username이 숫자로 변환되지 않으면, 여전히 이메일로 시도하거나 예외 발생
+      return userRepository.findByEmail(username)
+          .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username));
+    }
   }
 }

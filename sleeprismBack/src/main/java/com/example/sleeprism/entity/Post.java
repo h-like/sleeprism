@@ -2,36 +2,40 @@ package com.example.sleeprism.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Builder;
+import lombok.Builder; // Lombok Builder 임포트 유지
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder; // SuperBuilder 임포트 추가
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "post")
-public class Post extends BaseTimeEntity{
+@SuperBuilder // <-- @Builder 대신 @SuperBuilder 사용 (BaseTimeEntity 상속 고려)
+public class Post extends BaseTimeEntity { // BaseTimeEntity 상속
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "post_id")
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY) // N:1 관계, 지연 로딩이 기본
-  @JoinColumn(name = "original_author_id", nullable = false) // FK 컬럼 지정: 원본 작성자
-  private User originalAuthor; // 'user' 필드를 'originalAuthor'로 변경하거나 추가
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "original_author_id", nullable = false)
+  private User originalAuthor;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "current_owner_id", nullable = false) // FK 컬럼 지정: 현재 소유자
-  private User currentOwner; // 현재 소유자 (판매되면 바뀜)
+  @JoinColumn(name = "current_owner_id", nullable = false)
+  private User currentOwner;
 
   @Column(nullable = false, length = 255)
   private String title;
 
-  @Lob // 대용량 텍스트를 위한 어노테이션
+  @Lob
   @Column(nullable = false, columnDefinition = "TEXT")
   private String content;
 
@@ -40,61 +44,79 @@ public class Post extends BaseTimeEntity{
   private PostCategory category;
 
   @Column(name = "view_count", nullable = false)
-  private int viewCount = 0;
+  @Builder.Default // @Builder.Default 추가
+  private Long viewCount = 0L;
 
   @Column(name = "is_deleted", nullable = false)
+  @Builder.Default // @Builder.Default 추가
   private boolean isDeleted = false;
 
-  // 추가: 판매 요청을 받을 수 있는지 여부 (기본 false, 구매자가 요청하면 고려)
   @Column(name = "is_sellable", nullable = false)
-  private boolean isSellable = true; // 모든 게시물이 판매 요청을 받을 수 있도록 기본값 true로 설정.
-  // 필요에 따라 이 필드를 활용하여 판매 불가 게시물 설정 가능.
+  @Builder.Default // @Builder.Default 추가
+  private boolean isSellable = true;
 
-  // 추가: 포스트가 판매 완료되었는지 여부
   @Column(name = "is_sold", nullable = false)
+  @Builder.Default // @Builder.Default 추가
   private boolean isSold = false;
 
-  // 추가: 판매된 가격 (판매 완료 시 기록)
   @Column(name = "sold_price")
-  private Integer soldPrice; // Optional: 판매된 가격을 기록
+  private Integer soldPrice;
 
+  // 좋아요 수
+  @Column(name = "like_count", nullable = false)
+  @Builder.Default
+  private int likeCount = 0;
+
+  //  nullable = false 와 @Builder.Default 명시
+  @Column(name = "bookmark_count", nullable = false)
+  @Builder.Default
+  private int bookmarkCount = 0;
+
+
+  @Version
+  @Builder.Default // @Builder.Default 추가
+  private Long version = 0L;
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-  private List<Comment> comments = new ArrayList<>();
+  @Builder.Default
+  private Set<Comment> comments = new HashSet<>(); // FIX: List 대신 Set 사용
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-  private List<PostLike> likes = new ArrayList<>();
+  @Builder.Default
+  private Set<PostLike> likes = new HashSet<>(); // FIX: List 대신 Set 사용
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default // @Builder.Default 추가
   private List<Bookmark> bookmarks = new ArrayList<>();
 
   @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default // @Builder.Default 추가
   private List<Attachment> attachments = new ArrayList<>();
 
-
-  // 연관관계 편의 메소드 (기존 'setUser' 대신 'setOriginalAuthor'와 'setCurrentOwner'로 분리)
+  // setOriginalAuthor, setCurrentOwner 메서드는 User 엔티티의 컬렉션 관리를 위해 필요했지만,
+  // User 엔티티에서 @OneToMany(mappedBy="originalAuthor") 등으로 관계를 관리하므로 Post 측에서는 직접 List를 수정할 필요가 없습니다.
+  // User 엔티티가 @OneToMany 컬렉션을 가지고 있으면 Post 저장 시 자동으로 관계가 설정됩니다.
+  // 따라서 이 편의 메서드들 내부의 `user.getPosts().add(this)`와 같은 로직은 제거합니다.
   public void setOriginalAuthor(User originalAuthor) {
     this.originalAuthor = originalAuthor;
-    if (originalAuthor != null && !originalAuthor.getPosts().contains(this)) {
-      originalAuthor.getPosts().add(this);
-    }
   }
 
   public void setCurrentOwner(User currentOwner) {
     this.currentOwner = currentOwner;
-    // 필요하다면 User 엔티티에 ownedPosts 같은 목록을 추가하고 여기에 추가 로직 구현
   }
 
-
-  @Builder
-  public Post(User user, String title, String content, PostCategory category) {
-    this.originalAuthor = user; // 초기 작성자가 원본 작성자이자 현재 소유자
-    this.currentOwner = user;
-    this.title = title;
-    this.content = content;
-    this.category = category;
-    this.viewCount = 0;
-    this.isDeleted = false;
+  @PrePersist
+  public void prePersist() {
+    // @Builder.Default가 있으므로 여기서 널 체크 및 초기화 로직은 필요 없습니다.
+    // boolean 타입은 primitive type이라 null이 될 수 없으므로, null 체크를 제거합니다.
+    if (this.viewCount == null) {
+      this.viewCount = 0L;
+    }
+    if (this.version == null) {
+      this.version = 0L;
+    }
+    // isDeleted, isSellable, isSold는 boolean primitive이므로 null이 될 수 없음.
+    // 따라서 이들에 대한 null 체크는 제거합니다.
   }
 
   // 조회수 증가 메소드
@@ -123,28 +145,46 @@ public class Post extends BaseTimeEntity{
     }
   }
 
-  // **추가: 포스트 판매 완료 처리 메소드**
+  // 포스트 판매 완료 처리 메소드
   public void markAsSold(User buyer, Integer price) {
     if (this.isSold) {
       throw new IllegalStateException("이미 판매된 게시물입니다.");
     }
     this.isSold = true;
     this.soldPrice = price;
-    this.currentOwner = buyer; // 소유자 변경
+    this.currentOwner = buyer;
   }
 
-  // **추가: 포스트 수정/삭제 가능 여부 확인 메소드 (권한 로직)**
+  // 포스트 수정/삭제 가능 여부 확인 메소드 (권한 로직)
   public boolean isModifiableBy(User user) {
-    // 원본 작성자이고, 아직 판매되지 않았으며, 삭제되지 않은 경우에만 수정 가능
     return this.originalAuthor.equals(user) && !this.isSold && !this.isDeleted;
   }
 
   public boolean isDeletableBy(User user) {
-    // 원본 작성자이고, 아직 판매되지 않았으며, 삭제되지 않은 경우에만 삭제 가능
     return this.originalAuthor.equals(user) && !this.isSold && !this.isDeleted;
   }
+
+  // 좋아요 수를 증가시키는 메서드
+  public void incrementLikeCount() {
+    this.likeCount++;
+  }
+
+  // 좋아요 수를 감소시키는 메서드
+  public void decrementLikeCount() {
+    if (this.likeCount > 0) {
+      this.likeCount--;
+    }
+  }
+
+  // 북마크 수를 증가시키는 메서드
+  public void incrementBookmarkCount() {
+    this.likeCount++;
+  }
+
+  // 좋아요 수를 감소시키는 메서드
+  public void decrementBookmarkCount() {
+    if (this.likeCount > 0) {
+      this.likeCount--;
+    }
+  }
 }
-
-
-
-

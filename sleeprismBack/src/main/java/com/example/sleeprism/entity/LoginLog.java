@@ -2,50 +2,44 @@ package com.example.sleeprism.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "login_log")
-public class LoginLog {
-  // BaseTimeEntity를 상속하지 않고 loginTimestamp를 직접 관리
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SuperBuilder
+public class LoginLog extends BaseTimeEntity { // BaseTimeEntity 상속
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "login_log_id")
+  @Column(name = "log_id")
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY) // 지연 로딩
-  @JoinColumn(name = "user_id", nullable = false)
-  private User user;
+  @Column(name = "user_id", nullable = false)
+  private Long userId;
+
+  @Column(name = "login_timestamp", nullable = false)
+  private LocalDateTime loginTime;
 
   @Column(name = "ip_address", length = 50)
   private String ipAddress;
 
-  @Column(name = "login_timestamp", nullable = false)
-  private LocalDateTime loginTimestamp;
-
   @Enumerated(EnumType.STRING)
-  @Column(name = "login_type", length = 20)
-  private LoginType loginType;
+  @Column(name = "login_type", nullable = false, length = 20)
+  private LoginType loginType; // <-- 외부에서 분리된 LoginType enum 사용
 
-  @Column(name = "success_status", nullable = false)
-  private Boolean successStatus;
+  @Column(name = "success_status", nullable = false) // <-- 이 필드를 추가합니다.
+  private boolean successStatus; // 로그인 성공 여부
 
-  @Builder
-  public LoginLog(User user, String ipAddress, LoginType loginType, Boolean successStatus) {
-    this.user = user;
-    this.ipAddress = ipAddress;
-    this.loginTimestamp = LocalDateTime.now(); // 생성 시 현재 시간
-    this.loginType = loginType;
-    this.successStatus = successStatus;
+  // LoginType enum이 이제 독립적인 파일로 분리되었으므로, 이 내부 enum은 제거합니다.
+  /*
+  public enum LoginType {
+    NORMAL, GOOGLE, KAKAO, NAVER
   }
+  */
 }
-
-
-
-

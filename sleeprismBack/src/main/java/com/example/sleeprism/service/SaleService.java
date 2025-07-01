@@ -3,6 +3,7 @@ package com.example.sleeprism.service;
 import com.example.sleeprism.dto.OwnedPostResponseDTO;
 import com.example.sleeprism.dto.SaleRequestCreateRequestDTO;
 import com.example.sleeprism.dto.SaleRequestResponseDTO;
+import com.example.sleeprism.entity.NotificationType; // NotificationType import 추가
 import com.example.sleeprism.entity.Post;
 import com.example.sleeprism.entity.SaleRequest;
 import com.example.sleeprism.entity.SaleRequestStatus;
@@ -10,12 +11,12 @@ import com.example.sleeprism.entity.Transaction;
 import com.example.sleeprism.entity.TransactionStatus;
 import com.example.sleeprism.entity.User;
 import com.example.sleeprism.repository.PostRepository;
-//import com.example.sleeprism.repository.SaleRequestRepository;
 import com.example.sleeprism.repository.SaleRequestRepositroy;
 import com.example.sleeprism.repository.TransactionRepository;
 import com.example.sleeprism.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j; // Slf4j import 추가
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +28,18 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j // 로그 추가
 public class SaleService {
 
   private final SaleRequestRepositroy saleRequestRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final TransactionRepository transactionRepository;
+  private final NotificationService notificationService; // NotificationService 주입
 
   /**
    * 구매자가 특정 게시글에 대한 판매 요청을 생성합니다.
+   * 판매 요청 생성 시 게시글 원본 작성자(판매자)에게 알림을 생성합니다.
    * @param buyerId 구매자 사용자 ID
    * @param requestDto 판매 요청 생성 DTO
    * @return 생성된 판매 요청 정보 DTO
@@ -74,6 +78,17 @@ public class SaleService {
         .build();
 
     SaleRequest savedSaleRequest = saleRequestRepository.save(saleRequest);
+
+    // --- 알림 생성 로직 추가 ---
+    User seller = post.getOriginalAuthor(); // 게시글 원본 작성자 = 판매자
+    String message = String.format("'%s'님이 회원님의 게시글 '%s'에 판매 요청을 보냈습니다. (제시 가격: %d원)",
+        buyer.getNickname(), post.getTitle(), requestDto.getProposedPrice());
+    String redirectPath = String.format("/sale-requests/%d", savedSaleRequest.getId()); // 판매 요청 상세 페이지 경로
+    notificationService.createNotification(seller, NotificationType.SALE_REQUEST, message,
+        "SaleRequest", savedSaleRequest.getId(), redirectPath);
+    log.info("SALE_REQUEST notification sent to seller (User ID: {}) for SaleRequest ID: {}", seller.getId(), savedSaleRequest.getId());
+    // --- 알림 생성 로직 끝 ---
+
     return new SaleRequestResponseDTO(savedSaleRequest);
   }
 
@@ -107,6 +122,7 @@ public class SaleService {
 
   /**
    * 판매자가 판매 요청을 수락합니다.
+   * 요청 수락 시 구매자에게 알림을 생성합니다.
    * @param requestId 수락할 판매 요청 ID
    * @param sellerId 판매자 사용자 ID (권한 검증용)
    * @return 수락된 판매 요청 정보 DTO
@@ -140,15 +156,14 @@ public class SaleService {
     post.markAsSold(buyer, agreedPrice); // Post 엔티티의 markAsSold 메서드 호출
 
     // 에스크로 시스템에서 판매자에게 대금 지급 (실제 PG사 API 호출)
-    // 여기서는 임시로 external_transaction_id를 그대로 사용하거나, 새로운 ID를 생성
-    String externalTransactionId = saleRequest.getEscrowTransactionId(); // 또는 "PG_PAYOUT_" + UUID.randomUUID().toString();
+    String externalTransactionId = saleRequest.getEscrowTransactionId();
     // TODO: 실제 PG사 API를 통해 에스크로 대금 지급 로직 구현
 
     // 거래 기록 생성
     Transaction transaction = Transaction.builder()
         .saleRequest(saleRequest)
         .post(post)
-        .seller(post.getOriginalAuthor()) // Post 엔티티의 originalAuthor 사용
+        .seller(post.getOriginalAuthor())
         .buyer(buyer)
         .amount(agreedPrice)
         .externalTransactionId(externalTransactionId)
@@ -156,13 +171,30 @@ public class SaleService {
     transaction.complete(); // 거래 완료 상태로 설정
 
     transactionRepository.save(transaction);
-    postRepository.save(post); // 변경된 Post 상태 저장 (Dirty Checking으로 자동 저장될 수도 있지만 명시적으로 호출)
+    postRepository.save(post);
+
+    // --- 알림 생성 로직 추가 ---
+    // 구매자에게 판매 요청 수락 알림
+    String messageToBuyer = String.format("회원님의 게시글 '%s' 구매 요청이 판매자에 의해 수락되었습니다!", post.getTitle());
+    String redirectPathToBuyer = String.format("/sale-requests/%d", saleRequest.getId());
+    notificationService.createNotification(buyer, NotificationType.SALE_ACCEPTED, messageToBuyer,
+        "SaleRequest", saleRequest.getId(), redirectPathToBuyer);
+    log.info("SALE_ACCEPTED notification sent to buyer (User ID: {}) for SaleRequest ID: {}", buyer.getId(), saleRequest.getId());
+
+    // (선택 사항) 판매자 본인에게 게시글 판매 완료 알림 (선택 사항, 직접 수행했으니 굳이 알림은 필요 없을 수 있음)
+    // String messageToSeller = String.format("회원님의 게시글 '%s'가 '%s'님에게 판매 완료되었습니다.", post.getTitle(), buyer.getNickname());
+    // String redirectPathToSeller = String.format("/posts/%d", post.getId());
+    // notificationService.createNotification(seller, NotificationType.POST_PURCHASED, messageToSeller,
+    //     "Post", post.getId(), redirectPathToSeller);
+    // log.info("POST_PURCHASED notification sent to seller (User ID: {}) for Post ID: {}", seller.getId(), post.getId());
+    // --- 알림 생성 로직 끝 ---
 
     return new SaleRequestResponseDTO(saleRequest);
   }
 
   /**
    * 판매자가 판매 요청을 거절합니다.
+   * 요청 거절 시 구매자에게 알림을 생성합니다.
    * @param requestId 거절할 판매 요청 ID
    * @param sellerId 판매자 사용자 ID (권한 검증용)
    * @return 거절된 판매 요청 정보 DTO
@@ -196,11 +228,22 @@ public class SaleService {
     transaction.fail(); // 거래 실패 상태로 설정
     transactionRepository.save(transaction);
 
+    // --- 알림 생성 로직 추가 ---
+    // 구매자에게 판매 요청 거절 알림
+    User buyer = saleRequest.getBuyer();
+    String message = String.format("회원님의 게시글 '%s' 구매 요청이 판매자에 의해 거절되었습니다.", saleRequest.getPost().getTitle());
+    String redirectPath = String.format("/sale-requests/%d", saleRequest.getId());
+    notificationService.createNotification(buyer, NotificationType.SALE_REJECTED, message,
+        "SaleRequest", saleRequest.getId(), redirectPath);
+    log.info("SALE_REJECTED notification sent to buyer (User ID: {}) for SaleRequest ID: {}", buyer.getId(), saleRequest.getId());
+    // --- 알림 생성 로직 끝 ---
+
     return new SaleRequestResponseDTO(saleRequest);
   }
 
   /**
    * 구매자가 자신이 보낸 PENDING 상태의 판매 요청을 취소합니다.
+   * 요청 취소 시 판매자에게 알림을 생성합니다.
    * @param requestId 취소할 판매 요청 ID
    * @param buyerId 구매자 사용자 ID (권한 검증용)
    * @return 취소된 판매 요청 정보 DTO
@@ -233,6 +276,17 @@ public class SaleService {
         .build();
     transaction.fail(); // 거래 실패 상태로 설정 (취소도 실패의 일종)
     transactionRepository.save(transaction);
+
+    // --- 알림 생성 로직 추가 ---
+    // 판매자에게 판매 요청 취소 알림
+    User seller = saleRequest.getPost().getOriginalAuthor();
+    String message = String.format("'%s'님이 회원님의 게시글 '%s'에 대한 판매 요청을 취소했습니다.",
+        saleRequest.getBuyer().getNickname(), saleRequest.getPost().getTitle());
+    String redirectPath = String.format("/sale-requests/%d", saleRequest.getId());
+    notificationService.createNotification(seller, NotificationType.SALE_REJECTED, message, // 취소도 거절과 유사하게 처리 (원한다면 NotificationType.SALE_CANCELED 추가 가능)
+        "SaleRequest", saleRequest.getId(), redirectPath);
+    log.info("SALE_REJECTED (CANCELED) notification sent to seller (User ID: {}) for SaleRequest ID: {}", seller.getId(), saleRequest.getId());
+    // --- 알림 생성 로직 끝 ---
 
     return new SaleRequestResponseDTO(saleRequest);
   }
