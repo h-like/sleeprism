@@ -1,0 +1,340 @@
+/* src/public/css/PostDetailPage.css */
+
+/* 전체 페이지 컨테이너 */
+.main-container {
+    display: flex;
+    justify-content: center;
+    padding: 2.5rem 1rem; /* 상하 40px, 좌우 16px */
+    font-family: 'Pretendard', sans-serif; /* 모던한 폰트 */
+    min-height: 100vh;
+    background-color: #f8f9fa; /* 연한 배경색 */
+}
+
+/* 게시글 상세 래퍼 */
+.post-detail-wrapper {
+    background: rgba(255, 255, 255, 0.1); /* 거의 불투명한 흰색 배경 */
+    border: 1px solid rgba(255, 255, 255, 0.3); /* 유리 느낌 테두리 */
+    border-radius: 16px;
+    backdrop-filter: blur(8px); /* 흐림 효과 */
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08); /* 부드러운 그림자 */
+    max-width: 900px;
+    width: 100%;
+    padding: 2.5rem;
+    box-sizing: border-box;
+    margin: 2rem auto;
+    margin-top: 3rem;
+}
+
+/* 게시글 헤더 섹션 (작성자 정보 + 액션 버튼) */
+.post-header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0; /* 연한 구분선 */
+}
+
+.post-author-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.author-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #e9ecef; /* 아바타 없을 때 배경 */
+    border: 2px solid #ced4da;
+}
+
+.author-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.author-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.author-nickname {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+.post-date {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.post-actions-top {
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* 액션 버튼 공통 스타일 */
+.action-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid transparent;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.action-button svg {
+    margin-right: 0.5rem;
+}
+
+.edit-button {
+    background-color: #f0ad4e; /* 주황색 계열 */
+    color: white;
+}
+
+.edit-button:hover {
+    background-color: #ec971f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(240, 173, 78, 0.3);
+}
+
+.delete-button {
+    background-color: #d9534f; /* 빨간색 계열 */
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #c9302c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(217, 83, 79, 0.3);
+}
+
+.chat-button {
+    background-color: #17a2b8; /* 청록색 계열 */
+    color: white;
+}
+
+.chat-button:hover {
+    background-color: #138496;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+}
+
+.post-detail-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    line-height: 1.3;
+}
+
+.post-meta-tags {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+.meta-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #495057;
+    background-color: #e9ecef;
+    border: 1px solid #dee2e6;
+}
+
+.meta-tag svg {
+    margin-right: 0.3rem;
+    color: #6c757d;
+}
+
+.category-tag {
+    background-color: #e6f2ff; /* 연한 파랑 */
+    color: #007bff;
+    border-color: #b3d9ff;
+}
+
+.view-count {
+    background-color: #f0f8ff; /* 연한 하늘색 */
+    color: #6c757d;
+    border-color: #cce5ff;
+}
+
+/* 좋아요 버튼 */
+.like-button {
+    background-color: #ffe6e6; /* 연한 붉은색 */
+    color: #dc3545; /* 빨간색 */
+    border-color: #ffcccc;
+    cursor: pointer;
+}
+.like-button:hover {
+    background-color: #ffcccc;
+}
+.like-button.liked {
+    background-color: #dc3545; /* 좋아요 눌렀을 때 배경색 */
+    color: white; /* 좋아요 눌렀을 때 텍스트 색상 */
+}
+.like-button.liked svg {
+    fill: white; /* 좋아요 눌렀을 때 하트 채우기 */
+    stroke: white;
+}
+
+/* 북마크 버튼 */
+.bookmark-button {
+    background-color: #e6f7ff; /* 연한 푸른색 */
+    color: #007bff; /* 파란색 */
+    border-color: #cce5ff;
+    cursor: pointer;
+}
+.bookmark-button:hover {
+    background-color: #cce5ff;
+}
+.bookmark-button.bookmarked {
+    background-color: #007bff; /* 북마크 눌렀을 때 배경색 */
+    color: white; /* 북마크 눌렀을 때 텍스트 색상 */
+}
+.bookmark-button.bookmarked svg {
+    fill: white; /* 북마크 눌렀을 때 채우기 */
+    stroke: white;
+}
+
+
+.status-tag {
+    font-weight: 600;
+}
+
+.status-tag.sold {
+    background-color: #ffc107; /* 노란색 */
+    color: #343a40;
+    border-color: #ffeb3b;
+}
+
+.status-tag.un-sellable {
+    background-color: #6c757d; /* 어두운 회색 */
+    color: white;
+    border-color: #495057;
+}
+
+.post-content-body {
+    line-height: 1.8;
+    font-size: 1.05rem;
+    margin-bottom: 2.5rem;
+    /* Quill.js 콘텐츠 스타일링 */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.post-content-body p {
+    margin-bottom: 1rem;
+}
+
+.post-content-body h1, .post-content-body h2, .post-content-body h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.post-content-body h1 { font-size: 2em; }
+.post-content-body h2 { font-size: 1.5em; }
+.post-content-body h3 { font-size: 1.17em; }
+
+.post-content-body img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.5rem auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.post-content-body a {
+    color: #007bff;
+    text-decoration: none;
+}
+.post-content-body a:hover {
+    text-decoration: underline;
+}
+
+.post-actions-bottom {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 4rem;
+    padding-top: 1.0rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.primary-button {
+    background-image: linear-gradient(to right, #6f42c1, #007bff); /* 보라-파랑 그라데이션 */
+    color: white;
+}
+.primary-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(111, 66, 193, 0.3);
+}
+
+.secondary-button {
+    background-color: #6c757d; /* 회색 */
+    color: white;
+}
+.secondary-button:hover {
+    background-color: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(108, 117, 125, 0.3);
+}
+
+/* 댓글 섹션은 CommentSection 컴포넌트 CSS에 정의 */
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .post-detail-wrapper {
+        padding: 1.5rem;
+        margin: 1rem auto;
+    }
+
+    .post-header-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .post-actions-top {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 1rem;
+    }
+
+    .post-detail-title {
+        font-size: 1.8rem;
+    }
+
+    .post-meta-tags {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .post-content-body {
+        font-size: 1rem;
+    }
+
+    .post-actions-bottom {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .action-button {
+        width: 100%; /* 모바일에서 버튼 너비 100% */
+    }
+}
