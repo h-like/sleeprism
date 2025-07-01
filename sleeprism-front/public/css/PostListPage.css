@@ -1,0 +1,408 @@
+/* public/css/PostListPage.css */
+
+/* 전체 페이지 컨테이너: 중앙 정렬 및 배경 */
+.main-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.5rem 1rem; /* 상하 40px, 좌우 16px */
+    font-family: 'Pretendard', sans-serif; /* 더 모던한 폰트 사용을 권장 */
+}
+
+/* 메인 콘텐츠 래퍼: 최대 너비 및 중앙 정렬 */
+.content-wrapper {
+    max-width: 1080px; /* 다음카페와 유사한 넓이 (lg:max-w-5xl) */
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: auto;
+    padding: 2rem;
+    box-sizing: border-box; /* 패딩 포함 너비 계산 */
+}
+
+/* 게시글 리스트 컨테이너 */
+.post-list {
+    background: rgba(255, 255, 255, 0.15); /* 반투명 배경 */
+    border: 1px solid rgba(255, 255, 255, 0.3); /* 유리 느낌의 테두리 */
+    border-radius: 16px; /* 더 부드러운 라운딩 */
+    backdrop-filter: blur(12px); /* 유리처럼 흐림 효과 */
+    -webkit-backdrop-filter: blur(12px); /* Safari 호환 */
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2); /* 연한 그림자 */
+    list-style: none;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 12px;
+    transition: box-shadow 0.3s ease;
+}
+
+/* 마우스 호버 시 더 뚜렷한 유리 느낌 */
+.post-list:hover {
+    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.3);
+    border-radius: 12px;
+}
+
+/* 개별 게시글 항목 스타일 */
+.post-item {
+    display: flex;
+    /* flex-direction: column; 세로로 콘텐츠 배치 */
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.25); /* 부드러운 투명도 */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* 유리 테두리 */
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    transition: background 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+}
+
+.post-item:hover {
+    background: rgba(255, 255, 255, 0.35); /* 살짝 더 밝게 */
+    transform: translateY(-2px); /* 몽환적인 '뜸' 효과 */
+}
+
+.post-item:last-child {
+    margin-bottom: 0;
+}
+
+/* 썸네일 컨테이너 */
+.post-thumbnail {
+    flex-shrink: 0; /* 썸네일이 줄어들지 않도록 설정 */
+    width: 120px;
+    height: 90px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-right: 20px;
+    background-color: #e9ecef; /* 이미지가 없을 때 배경색 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #e9ecef;
+}
+
+.post-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 이미지가 잘리지 않고 꽉 차게 */
+}
+
+.post-thumbnail.no-image {
+    width: 0;
+    height: 0;
+    margin-right: 0; /* 이미지가 없으면 공간 차지하지 않음 */
+    border: none;
+}
+
+/* 텍스트 정보 컨테이너 */
+.post-info {
+    flex-grow: 1; /* 남은 공간을 모두 차지 */
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* flexbox에서 내용이 넘치지 않도록 */
+}
+
+/* 제목 스타일 */
+.post-title {
+    font-size: 1.25rem; /* 20px */
+    font-weight: 700;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 한 줄 말줄임표 */
+    max-width: 100%;
+}
+
+/* 내용 요약 스타일 */
+.post-summary {
+    font-size: 0.95rem; /* 15px */
+    color: #6c757d;
+    line-height: 1.5;
+    margin-bottom: 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* 2줄까지만 표시 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 메타 정보 (작성자, 날짜, 조회수 등) */
+.post-meta {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem; /* 14px */
+    color: #868e96;
+    gap: 16px; /* 아이템 간 간격 */
+}
+
+.post-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px; /* 아이콘과 텍스트 사이 간격 */
+}
+
+.post-meta-item svg {
+    color: #adb5bd;
+    width: 16px;
+    height: 16px;
+}
+
+
+/* ==================================================================== */
+/* 탭 네비게이션 스타일 */
+/* ==================================================================== */
+./* 탭 네비게이션 스타일 (최신글/인기글) */
+.tab-navigation {
+    display: flex;
+    border-bottom: 2px solid #e0e0e0;
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.tab-button {
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #6b7280; 
+    /* 회색 텍스트 */
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.tab-button.active {
+    color: #4f46e5; /* 보라색 계열 활성 텍스트 */
+}
+
+.tab-indicator {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    height: 3px;
+    background-color: #4f46e5; /* 보라색 계열 인디케이터 */
+    transition: all 0.3s ease;
+    z-index: 0;
+}
+
+
+/* 탭 인디케이터 위치 및 너비 조정을 위한 클래스 (JS에서 동적으로 제어) */
+.tab-indicator-latest {
+    /* 이 클래스는 JavaScript에서 동적으로 위치와 너비를 설정할 것입니다. */
+}
+
+/* ==================================================================== */
+/* 글쓰기 버튼 스타일 */
+/* ==================================================================== */
+/* 글쓰기 버튼 (Floating) */
+.floating-create-button-container {
+    position: fixed;
+    bottom: 40px; /* 화면 하단에서 40px 위 */
+    right: 40px; /* 화면 오른쪽에서 40px 왼쪽 */
+    z-index: 1000; /* 다른 요소 위에 표시 */
+}
+
+.create-post-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center; /* 버튼 내부 요소를 가운데 정렬 */
+    gap: 8px; /* 아이콘과 텍스트 사이 간격 */
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #4c6ef5, #364fc7); /* 그라데이션 배경 */
+    color: #ffffff;
+    font-weight: 600;
+    border-radius: 28px; /* 둥근 모서리 */
+    box-shadow: 0 6px 20px rgba(76, 110, 245, 0.3); /* 부드러운 그림자 */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    cursor: pointer;    
+}
+
+.create-post-button:hover {
+    transform: translateY(-2px); /* 호버 시 약간 위로 이동 */
+    box-shadow: 0 10px 25px rgba(76, 110, 245, 0.4); /* 그림자 진하게 */
+}
+
+.create-post-button svg {
+    width: 20px;
+    height: 20px;
+}
+
+.no-post {
+    margin-bottom: 70vh;
+}
+
+
+
+/* ==================================================================== */
+/* 기타 스타일 조정 (선택 사항) */
+/* ==================================================================== */
+ 
+.post-list {
+    border: none; /* 리스트 컨테이너의 테두리 제거 */
+    box-shadow: none; /* 리스트 컨테이너의 그림자 제거 */
+    border-radius: 0;
+} 
+
+.post-item {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.post-item:first-child {
+    border-top: 1px solid #e9ecef;
+}
+
+/* 프로필 영역 스타일 조정 */
+.user-profile-section {
+    display: flex;
+    align-items: center;
+    margin-bottom: 32px;
+    padding: 24px;
+    background-color: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* 카테고리 버튼 컨테이너 */
+.category-buttons-container, .period-buttons-container {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+   background: rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.category-buttons-container button, .period-buttons-container button {
+    padding: 0.5rem 1.25rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transform: scale(1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 선택되지 않은 카테고리/기간 버튼 기본 스타일 */
+.category-buttons-container button:not(.active-category):not(.all-active-btn),
+.period-buttons-container button:not(.popular-period-active-btn) {
+    background-color: #e2e8f0; /* Light blue-gray */
+    color: #4a5568; /* Dark gray */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.category-buttons-container button:not(.active-category):not(.all-active-btn):hover,
+.period-buttons-container button:not(.popular-period-active-btn):hover {
+    background-color: #cfd8dc;
+    color: #2d3748;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-2px);
+}
+
+/* '전체' 버튼 활성화 상태 (selectedCategories.size === 0) */
+.category-buttons-container button.all-active {
+    background-image: linear-gradient(45deg, #6a82fb 0%, #fc5c7d 100%); /* 블루-핑크 그라데이션 */
+    color: white;
+    box-shadow: 0 6px 20px rgba(106, 130, 251, 0.4);
+    transform: scale(1.05);
+    animation: glowing-all 1.5s infinite alternate; /* 전체 버튼에 빛나는 효과 */
+}
+
+/* 개별 카테고리 버튼 활성화 상태 */
+.category-buttons-container button.active-category {
+    background-image: linear-gradient(45deg, #8a2be2 0%, #4682b4 100%); /* 보라색-스틸블루 그라데이션 (몽환적 보석) */
+    color: white;
+    box-shadow: 0 8px 25px rgba(138, 43, 226, 0.5), 0 0 15px rgba(138, 43, 226, 0.3); /* 깊은 그림자와 은은한 빛 */
+    transform: scale(1.1); /* 더 강조된 스케일 */
+    border: 1px solid rgba(255, 255, 255, 0.3); /* 투명한 테두리 */
+    animation: glowing-gem 1.8s infinite ease-in-out; /* 보석 빛나는 애니메이션 */
+}
+
+/* '전체' 버튼이 아닌 개별 카테고리 버튼의 활성화 상태에 대한 호버 효과 */
+.category-buttons-container button.active-category:hover {
+    background-image: linear-gradient(45deg, #a052ee 0%, #63a0d6 100%); /* 살짝 밝아지는 그라데이션 */
+    box-shadow: 0 10px 30px rgba(138, 43, 226, 0.6), 0 0 20px rgba(138, 43, 226, 0.4);
+    transform: scale(1.12);
+}
+
+/* 인기글 기간 버튼 활성화 상태 */
+.period-buttons-container button.popular-period-active-btn {
+    background-image: linear-gradient(45deg, #00c6ff 0%, #0072ff 100%); /* 하늘색-진한 파랑 그라데이션 */
+    color: white;
+    box-shadow: 0 6px 20px rgba(0, 198, 255, 0.4), 0 0 10px rgba(0, 198, 255, 0.2);
+    transform: scale(1.05);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    animation: glowing-period 1.5s infinite ease-in-out;
+}
+
+/* 활성화된 버튼에 대한 호버 효과 */
+.category-buttons-container button.active-category:hover,
+.category-buttons-container button.all-active-btn:hover,
+.period-buttons-container button.popular-period-active-btn:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 10px 30px rgba(138, 43, 226, 0.6), 0 0 20px rgba(138, 43, 226, 0.4);
+    transform: scale(1.12);
+}
+
+/* 애니메이션 정의 */
+@keyframes glowing-gem {
+    0% {
+        box-shadow: 0 8px 25px rgba(138, 43, 226, 0.5), 0 0 15px rgba(138, 43, 226, 0.3);
+        transform: scale(1.1);
+    }
+    50% {
+        box-shadow: 0 12px 35px rgba(138, 43, 226, 0.7), 0 0 25px rgba(138, 43, 226, 0.5);
+        transform: scale(1.12);
+    }
+    100% {
+        box-shadow: 0 8px 25px rgba(138, 43, 226, 0.5), 0 0 15px rgba(138, 43, 226, 0.3);
+        transform: scale(1.1);
+    }
+}
+
+@keyframes glowing-all {
+    0% {
+        box-shadow: 0 6px 20px rgba(106, 130, 251, 0.4);
+        transform: scale(1.05);
+    }
+    50% {
+        box-shadow: 0 10px 30px rgba(106, 130, 251, 0.6);
+        transform: scale(1.06);
+    }
+    100% {
+        box-shadow: 0 6px 20px rgba(106, 130, 251, 0.4);
+        transform: scale(1.05);
+    }
+}
+
+/* 미디어 쿼리 - 반응형 디자인 */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 10px;
+    }
+
+    .post-title {
+        font-size: 1.25rem;
+    }
+
+    .post-summary {
+        font-size: 0.9rem;
+    }
+
+    .post-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}

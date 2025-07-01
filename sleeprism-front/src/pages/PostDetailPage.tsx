@@ -1,8 +1,9 @@
-// src/pages/PostDetailPage.tsx
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CommentSection from '../components/CommentSection';
 import SaleRequestModal from '../components/SaleRequestModal';
+import { createOrGetSingleChatRoom } from '../service/ChatService';
+import '../../public/css/PostDetailPage.css'; // 새로운 CSS 파일을 사용할 예정입니다.
 
 // Post 데이터의 타입 정의 (백엔드 PostResponseDTO와 일치해야 합니다)
 interface PostDetail {
@@ -11,17 +12,25 @@ interface PostDetail {
   content: string;
   category: string;
   viewCount: number;
-  // 백엔드 응답 필드명과 정확히 일치하도록 수정:
-  deleted: boolean; // <-- isDeleted -> deleted
+  deleted: boolean;
   authorNickname: string;
-  originalAuthorId: number;
+  originalAuthorId: number; // 게시글 원본 작성자 ID
+  authorProfileImageUrl: string | null; // 프로필 이미지 URL 추가 (백엔드 DTO에 있어야 함)
   createdAt: string;
   updatedAt: string;
-  sellable: boolean; // <-- isSellable -> sellable
-  sold: boolean;     // <-- isSold -> sold
+  sellable: boolean;
+  sold: boolean;
+  likeCount: number; // 좋아요 수 추가
+  bookmarkCount: number; // 북마크 수 추가
 }
 
 // JWT 토큰에서 사용자 ID를 디코딩하는 헬퍼 함수
+interface DecodedToken {
+  userId?: number;
+  id?: number;
+  sub?: string;
+}
+
 const getUserIdFromToken = (): number | null => {
   const token = localStorage.getItem('jwtToken');
   if (!token) {
@@ -30,24 +39,60 @@ const getUserIdFromToken = (): number | null => {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join('')
+    );
 
-    const decodedToken = JSON.parse(jsonPayload);
+    const decodedToken: DecodedToken = JSON.parse(jsonPayload);
     const userIdRaw = decodedToken.userId || decodedToken.id || decodedToken.sub;
     const userId = typeof userIdRaw === 'number' ? userIdRaw : parseInt(userIdRaw as string, 10);
     return isNaN(userId) ? null : userId;
   } catch (e) {
-    console.error("JWT 토큰 디코딩 중 오류 발생:", e);
+    console.error('JWT 토큰 디코딩 중 오류 발생:', e);
     return null;
   }
 };
 
+// 이미지 URL에 백엔드 컨텍스트 경로를 추가하는 헬퍼 함수
+const convertImageUrlsWithContextPath = (htmlContent: string): string => {
+  if (!htmlContent) return '';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const images = doc.querySelectorAll('img');
+
+  images.forEach((img) => {
+    let src = img.getAttribute('src');
+    if (src) {
+      const backendBaseUrl = 'http://localhost:8080';
+      const apiPathSegment = '/api/posts/files/';
+      // 이미 백엔드 URL로 시작하면 그대로 둠 (불필요한 중복 방지)
+      if (src.startsWith(`${backendBaseUrl}/`)) {
+        return;
+      } else if (src.startsWith(apiPathSegment)) { // /api/posts/files/ 로 시작하는 경우
+        img.setAttribute('src', backendBaseUrl + src);
+      } else if (src.startsWith('/')) { // 루트 상대 경로인 경우 (예: /uploads/...)
+        img.setAttribute('src', backendBaseUrl + src);
+      }
+      // 그 외의 경우 (상대 경로, 외부 URL 등)는 변경하지 않음
+    }
+  });
+
+  return doc.body.innerHTML;
+};
+
+// 백엔드 기본 URL (프로필 이미지, 첨부 파일 경로 구성용)
+const BACKEND_BASE_URL = 'http://localhost:8080';
 
 function PostDetailPage() {
-  const { postId } = useParams<{ postId: string }>(); 
+  const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
+  const location = useLocation(); // useLocation 훅 추가
 
   const [post, setPost] = useState<PostDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -55,44 +100,90 @@ function PostDetailPage() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isSaleRequestModalOpen, setIsSaleRequestModalOpen] = useState<boolean>(false);
 
-  const refreshPostData = async () => {
+  // 좋아요 및 북마크 상태 추가
+  const [isLiked, setIsLiked] = useState<boolean>(false);
+  const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
+  const [likeCount, setLikeCount] = useState<number>(0);
+  const [bookmarkCount, setBookmarkCount] = useState<number>(0);
+
+  // 게시글 데이터 및 좋아요/북마크 상태를 새로고침하는 함수
+  const refreshPostData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8080/sleeprism/api/posts/${postId}`);
-      if (!response.ok) {
-        if (response.status === 404) {
+      // 게시글 상세 정보 가져오기
+      const postResponse = await fetch(`${BACKEND_BASE_URL}/api/posts/${postId}`);
+      if (!postResponse.ok) {
+        if (postResponse.status === 404) {
           throw new Error('게시글을 찾을 수 없습니다.');
         }
-        const errorData = await response.json();
-        throw new Error(errorData.message || `게시글을 불러오는데 실패했습니다: ${response.status}`);
+        const errorData = await postResponse.json();
+        throw new Error(
+          errorData.message || `게시글을 불러오는데 실패했습니다: ${postResponse.status}`
+        );
       }
-      const data: PostDetail = await response.json();
-      setPost(data);
-      console.log("Debug: Post data refreshed. sellable:", data.sellable, "sold:", data.sold); // 디버그 로그도 sellable, sold로 변경
+      const postData: PostDetail = await postResponse.json();
+      setPost(postData);
+      setLikeCount(postData.likeCount); // 초기 좋아요 수 설정
+      setBookmarkCount(postData.bookmarkCount); // 초기 북마크 수 설정
+      
+      // 디버깅: 게시글 데이터 및 프로필 이미지 URL 확인
+      console.log('게시글 데이터:', postData);
+      console.log('게시글 작성자 프로필 이미지 URL:', postData.authorProfileImageUrl);
+
+      // 로그인된 사용자라면 좋아요 및 북마크 상태 가져오기
+      const userId = getUserIdFromToken();
+      setCurrentUserId(userId);
+
+      if (userId) {
+        const token = localStorage.getItem('jwtToken');
+        if (token) {
+          // 좋아요 상태 확인
+          const likeStatusResponse = await fetch(`${BACKEND_BASE_URL}/api/posts/${postId}/like/status`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (likeStatusResponse.ok) {
+            const likeStatusData = await likeStatusResponse.json();
+            setIsLiked(likeStatusData.isLiked);
+          } else {
+            console.warn('좋아요 상태를 가져오는데 실패했습니다.', likeStatusResponse.status);
+            setIsLiked(false); // 실패 시 좋아요 안 된 상태로 간주
+          }
+
+          // 북마크 상태 확인
+          const bookmarkStatusResponse = await fetch(`${BACKEND_BASE_URL}/api/posts/${postId}/bookmark/status`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (bookmarkStatusResponse.ok) {
+            const bookmarkStatusData = await bookmarkStatusResponse.json();
+            setIsBookmarked(bookmarkStatusData.isBookmarked);
+          } else {
+            console.warn('북마크 상태를 가져오는데 실패했습니다.', bookmarkStatusResponse.status);
+            setIsBookmarked(false); // 실패 시 북마크 안 된 상태로 간주
+          }
+        }
+      }
     } catch (e: any) {
-      console.error("게시글 상세 정보를 새로고침하는 중 오류 발생:", e);
-      setError(e.message || "게시글을 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.");
+      console.error('게시글 상세 정보를 새로고침하는 중 오류 발생:', e);
+      setError(e.message || '게시글을 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [postId]); // postId가 변경될 때마다 함수 재생성
 
   useEffect(() => {
-    setCurrentUserId(getUserIdFromToken());
     refreshPostData();
-  }, [postId]); 
+  }, [postId, refreshPostData]);
 
-  // 수정 버튼 클릭 핸들러
   const handleEdit = () => {
     if (post) {
-      alert('게시글 수정 기능은 아직 구현되지 않았습니다.');
+      // TODO: 게시글 수정 페이지로 이동하는 로직 구현
+      console.log('게시글 수정 기능은 아직 구현되지 않았습니다.');
     }
   };
 
-  // 삭제 버튼 클릭 핸들러
   const handleDelete = async () => {
-    if (!post || !window.confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+    const confirmDelete = window.confirm('정말로 이 게시글을 삭제하시겠습니까?');
+    if (!post || !confirmDelete) {
       return;
     }
 
@@ -104,10 +195,10 @@ function PostDetailPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/sleeprism/api/posts/${post.id}`, {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/posts/${post.id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -124,7 +215,6 @@ function PostDetailPage() {
     }
   };
 
-  // 판매 요청 모달 열기
   const handleOpenSaleRequestModal = () => {
     const token = localStorage.getItem('jwtToken');
     if (!token) {
@@ -135,10 +225,131 @@ function PostDetailPage() {
     setIsSaleRequestModalOpen(true);
   };
 
-  // 판매 요청 모달 닫기
   const handleCloseSaleRequestModal = () => {
     setIsSaleRequestModalOpen(false);
   };
+
+  const handleStartChat = async () => {
+    if (!post || !currentUserId) {
+      alert('로그인이 필요하거나 게시글 정보가 없습니다.');
+      return;
+    }
+    if (currentUserId === post.originalAuthorId) {
+      alert('자신에게 채팅을 시작할 수 없습니다.');
+      return;
+    }
+
+    try {
+      const chatRoom = await createOrGetSingleChatRoom(post.originalAuthorId);
+      alert(`${post.authorNickname}님과의 채팅방으로 이동합니다.`);
+      navigate(`/chat/${chatRoom.id}`);
+    } catch (err: any) {
+      console.error('채팅방 생성 또는 조회 실패:', err);
+      alert(`채팅 시작 실패: ${err.message}`);
+    }
+  };
+
+  // 좋아요 토글 기능
+  const handleLikeToggle = async () => {
+    if (!currentUserId) {
+      alert('좋아요 기능을 이용하려면 로그인이 필요합니다.');
+      navigate('/login');
+      return;
+    }
+    if (!post) return;
+
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      alert('로그인이 필요합니다.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/posts/${post.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `좋아요 토글 실패: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setIsLiked(result.liked);
+      setLikeCount((prevCount) => (result.liked ? prevCount + 1 : prevCount - 1));
+      console.log('좋아요 토글 성공:', result.liked);
+    } catch (e: any) {
+      console.error('좋아요 토글 중 오류 발생:', e);
+      alert(`좋아요 처리 실패: ${e.message}`);
+    }
+  };
+
+  // 북마크 토글 기능
+  const handleBookmarkToggle = async () => {
+    if (!currentUserId) {
+      alert('북마크 기능을 이용하려면 로그인이 필요합니다.');
+      navigate('/login');
+      return;
+    }
+    if (!post) return;
+
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      alert('로그인이 필요합니다.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/posts/${post.id}/bookmark`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `북마크 토글 실패: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setIsBookmarked(result.bookmarked);
+      setBookmarkCount((prevCount) => (result.bookmarked ? prevCount + 1 : prevCount - 1));
+      console.log('북마크 토글 성공:', result.bookmarked);
+    } catch (e: any) {
+      console.error('북마크 토글 중 오류 발생:', e);
+      alert(`북마크 처리 실패: ${e.message}`);
+    }
+  };
+
+  // "목록으로 돌아가기" 버튼 핸들러
+  const handleBackToList = () => {
+    // PostListPage에서 전달받은 상태를 사용하여 URL을 구성
+    const state = location.state as { tab?: string; category?: string[]; period?: string } | undefined;
+    const queryParams = new URLSearchParams();
+
+    if (state) {
+      if (state.tab) {
+        queryParams.append('tab', state.tab);
+      }
+      if (state.tab === 'latest' && state.category && state.category.length > 0) {
+        queryParams.append('category', state.category.join(','));
+      }
+      if (state.tab === 'popular' && state.period && state.period !== 'all_time') {
+        queryParams.append('period', state.period);
+      }
+    }
+    
+    navigate(`/posts?${queryParams.toString()}`);
+  };
+
 
   if (loading) {
     return (
@@ -164,78 +375,113 @@ function PostDetailPage() {
     );
   }
 
-  // 현재 로그인한 사용자가 게시글 작성자인지 확인
-  const isAuthor = currentUserId !== null && 
-                   typeof post.originalAuthorId === 'number' && 
-                   post.originalAuthorId === currentUserId;
-  
-  // 판매 요청 버튼 표시 조건:
-  // !isAuthor: 게시글 작성자가 아님
-  // post.sellable: 게시글이 판매 가능한 상태 (true)  <-- post.isSellable -> post.sellable
-  // !post.sold: 게시글이 아직 판매되지 않음 (false) <-- !post.isSold -> !post.sold
+  const isAuthor = currentUserId !== null && post.originalAuthorId === currentUserId;
   const showSaleRequestButton = !isAuthor && post.sellable && !post.sold;
+  const renderedContent = post ? convertImageUrlsWithContextPath(post.content) : '';
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8 font-inter">
-      <div className="max-w-4xl w-full bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">{post.title}</h1>
-          <div className="flex space-x-3">
-            {/* 수정/삭제 버튼은 작성자에게만 보임 */}
+  return ( 
+    <div className="main-container">
+      <div className="post-detail-wrapper">
+        <div className="post-header-section">
+          <div className="post-author-info">
+            <div className="author-avatar">
+              {/* 백엔드에서 authorProfileImageUrl을 제공하면 사용, 아니면 placeholder 사용 */}
+              <img 
+                src={post.authorProfileImageUrl ? `${BACKEND_BASE_URL}${post.authorProfileImageUrl}` : "https://placehold.co/48x48/F0F0F0/ADADAD?text=User"} 
+                alt="Author Avatar" 
+              />
+            </div>
+            <div className="author-details">
+              <span className="author-nickname">{post.authorNickname}</span>
+              <span className="post-date">
+                {new Date(post.createdAt).toLocaleDateString('ko-KR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </span>
+            </div>
+          </div>
+          <div className="post-actions-top">
+            {/* 상단 버튼 그룹 */}
             {isAuthor && (
               <>
-                <button
-                  onClick={handleEdit}
-                  className="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition duration-300 transform hover:scale-105 flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-line mr-1"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>
-                  수정
+                <button onClick={handleEdit} className="action-button edit-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-line"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m15 5 3 3"/></svg>
+                  <span>수정</span>
                 </button>
-                <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition duration-300 transform hover:scale-105 flex items-center"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2 mr-1"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                  삭제
+                <button onClick={handleDelete} className="action-button delete-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                  <span>삭제</span>
                 </button>
               </>
             )}
-            {/* 판매 요청 버튼은 작성자가 아니고, 판매 가능하며, 판매되지 않은 경우에만 보임 */}
-            {showSaleRequestButton && (
-              <button
-                onClick={handleOpenSaleRequestModal}
-                className="px-4 py-2 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600 transition duration-300 transform hover:scale-105 flex items-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-badge-dollar-sign mr-1"><path d="M3.34 18.27a10 10 0 1 1 17.32 0"/><path d="M16 16.27a2 2 0 0 0 0-4H8"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-                판매 요청
+            {!isAuthor && currentUserId && (
+              <button onClick={handleStartChat} className="action-button chat-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle-code"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="m10 10-2 2 2 2"/><path d="m14 14 2-2-2-2"/></svg>
+                <span>1:1 채팅</span>
               </button>
             )}
           </div>
         </div>
 
-        <p className="text-gray-600 text-sm mb-4">
-          작성자: <span className="font-medium text-gray-700">{post.authorNickname}</span> |
-          카테고리: <span className="font-medium text-gray-700">{post.category}</span> |
-          조회수: <span className="font-medium text-gray-700">{post.viewCount}</span> |
-          작성일: <span className="font-medium text-gray-700">{new Date(post.createdAt).toLocaleDateString()}</span>
-          {post.sold && <span className="ml-3 px-2 py-1 bg-gray-300 text-gray-700 text-xs font-semibold rounded-full">판매 완료</span>} {/* post.isSold -> post.sold */}
-          {!post.sellable && <span className="ml-3 px-2 py-1 bg-red-300 text-red-700 text-xs font-semibold rounded-full">판매 불가</span>} {/* !post.isSellable -> !post.sellable */}
-        </p>
+        <h1 className="post-detail-title">{post.title}</h1>
+        <div className="post-meta-tags">
+          <span className="meta-tag category-tag">{post.category}</span>
+          <span className="meta-tag view-count">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>{post.viewCount}</span>
+          </span>
+          {/* 좋아요/북마크 버튼 및 개수 표시 */}
+          {currentUserId && ( // 로그인한 사용자에게만 표시
+            <>
+              <button onClick={handleLikeToggle} className={`meta-tag like-button ${isLiked ? 'liked' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={isLiked ? "#dc2626" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart">
+                  <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5L12 22Z"/>
+                </svg>
+                <span>{likeCount}</span>
+              </button>
+              <button onClick={handleBookmarkToggle} className={`meta-tag bookmark-button ${isBookmarked ? 'bookmarked' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={isBookmarked ? "#2563eb" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bookmark">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                </svg>
+                <span>{bookmarkCount}</span>
+              </button>
+            </>
+          )}
 
-        <div 
-          className="text-gray-800 leading-relaxed text-lg prose prose-blue max-w-none border-t border-b border-gray-200 py-6"
-          dangerouslySetInnerHTML={{ __html: post.content }} 
-        />
-
-        <div className="mt-8">
-          <button
-            onClick={() => navigate('/posts')}
-            className="px-6 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-300 transition duration-300 transform hover:scale-105"
-          >
-            목록으로 돌아가기
-          </button>
+          {post.sold && <span className="meta-tag status-tag sold">판매 완료</span>}
+          {!post.sellable && <span className="meta-tag status-tag un-sellable">판매 불가</span>}
         </div>
 
+        <div
+          className="post-content-body"
+          dangerouslySetInnerHTML={{ __html: renderedContent }}
+        />
+
+        <div className="post-actions-bottom">
+          {showSaleRequestButton && (
+            <button
+              onClick={handleOpenSaleRequestModal}
+              className="action-button primary-button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-badge-dollar-sign mr-1"><path d="M3.34 18.27a10 10 0 1 1 17.32 0"/><path d="M16 16.27a2 2 0 0 0 0-4H8"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+              <span>판매 요청하기</span>
+            </button>
+          )}
+          <button
+            onClick={handleBackToList} // 수정된 핸들러 사용
+            className="action-button secondary-button"
+          >
+            <span>목록으로 돌아가기</span>
+          </button>
+        </div>
+        {/* // 짧은 구분선 */}
+        <hr style={{
+          backgroundColor: '#d6d6d6',
+          height: '1px',
+          border: 'none'
+        }} />
         {/* 댓글 섹션 */}
         {post.id && <CommentSection postId={post.id} />}
       </div>
@@ -250,6 +496,7 @@ function PostDetailPage() {
         />
       )}
     </div>
+    
   );
 }
 
