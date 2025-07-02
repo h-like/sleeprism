@@ -43,12 +43,14 @@ const extractAndConvertFirstImageUrl = (htmlContent: string): string | null => {
       let src = imgElement.getAttribute('src');
       if (src) {
         const BACKEND_BASE_URL = 'http://localhost:8080';
-        const FILE_API_PATH_PREFIX = '/api/posts/files/';
+        // FIX: src가 이미 backendBaseUrl로 시작하면 그대로 반환합니다.
+        // HtmlSanitizer 수정으로 DB에 이미 절대 경로가 저장되기 때문입니다.
         if (src.startsWith(BACKEND_BASE_URL)) {
           return src;
-        } else if (src.startsWith(FILE_API_PATH_PREFIX)) {
-          return `${BACKEND_BASE_URL}${src}`;
-        } else if (src.startsWith('/')) {
+        } 
+        // 그 외의 경우 (상대 경로인 경우)에만 backendBaseUrl을 붙입니다.
+        // (이 로직은 현재 상황에서는 거의 실행되지 않을 것입니다.)
+        else if (src.startsWith('/')) { 
           return `${BACKEND_BASE_URL}${src}`;
         }
       }
@@ -286,6 +288,88 @@ function PostListPage() {
     );
   }
 
+  if (posts.length === 0 && !loading) { // 게시글이 없을 때 메시지 표시
+    return (
+      <div className="main-container">
+        <div className="content-wrapper">
+          <div className="flex flex-col lg:flex-row lg:space-x-8">
+            <main className="lg:w-2/3 w-full">
+              {/* 탭 네비게이션 및 카테고리/기간 버튼은 그대로 유지 */}
+              <div className="tab-navigation mb-6">
+                <button
+                  ref={latestTabRef}
+                  onClick={() => handleTabClick('latest')}
+                  className={`tab-button ${activeTab === 'latest' ? 'active' : ''}`}
+                >
+                  최신글
+                </button>
+                <button
+                  ref={popularTabRef}
+                  onClick={() => handleTabClick('popular')}
+                  className={`tab-button ${activeTab === 'popular' ? 'active' : ''}`}
+                >
+                  인기글
+                </button>
+              </div>
+
+              {activeTab === 'latest' && (
+                  <div className="category-buttons-container mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
+                    <button
+                      onClick={() => handleCategoryButtonClick('ALL')}
+                      className={`px-5 py-2 rounded-full font-semibold transition-colors duration-200 shadow-md
+                        ${selectedCategories.size === 0 ? 'all-active-btn' : ''}
+                      `}
+                    >
+                      전체
+                    </button>
+                    {POST_CATEGORIES.map((category) => (
+                      <button
+                        key={category.name}
+                        onClick={() => handleCategoryButtonClick(category.name)}
+                        className={`px-5 py-2 rounded-full font-semibold transition-colors duration-200 shadow-md
+                          ${selectedCategories.has(category.name) ? 'active-category' : ''}
+                        `}
+                      >
+                        {category.label}
+                      </button>
+                    ))}
+                  </div>
+              )}
+
+              {activeTab === 'popular' && (
+                <div className="period-buttons-container flex flex-wrap justify-center gap-3 mb-6 p-4 bg-blue-50 rounded-lg shadow-inner">
+                  {POPULAR_PERIODS.map((period) => (
+                    <button
+                      key={period.name}
+                      onClick={() => handlePeriodButtonClick(period.name)}
+                      className={`px-5 py-2 rounded-full font-semibold transition-colors duration-200 shadow-md
+                        ${popularPeriod === period.name ? 'popular-period-active-btn' : ''}
+                      `}
+                    >
+                      {period.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="fixed bottom-8 right-8 z-50 floating-create-button-container">
+                <button
+                  onClick={handleCreateNewPost}
+                  className="create-post-button"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil-line"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="m19 14 3 3"/><path d="m17 12 3 3"/></svg>
+                  <span>글쓰기</span>
+                </button>
+              </div>
+              <p className="text-center text-gray-600 text-lg py-10 no-post">아직 작성된 게시글이 없습니다.</p>
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
     <div className="main-container">
       <div className="content-wrapper">
@@ -365,57 +449,58 @@ function PostListPage() {
             </div>
 
             {/* 게시글 목록 */}
-            {posts.length === 0 ? (
-              <p className="text-center text-gray-600 text-lg py-10 no-post">아직 작성된 게시글이 없습니다.</p>
-            ) : (
-              <ul className="post-list">
-                {posts.map((post) => {
-                  const thumbnailUrl = extractAndConvertFirstImageUrl(post.content);
-                  const summaryText = getPlainTextSummary(post.content);
+            <ul className="post-list">
+              {posts.map((post) => {
+                const thumbnailUrl = extractAndConvertFirstImageUrl(post.content);
+                const summaryText = getPlainTextSummary(post.content);
 
-                  return (
-                    <li
-                      key={post.id}
-                      className="post-item"
-                      // 상세 페이지로 이동할 때 현재 PostListPage의 상태를 state로 전달
-                      onClick={() => navigate(`/posts/${post.id}`, { 
-                          state: { 
-                              tab: activeTab, 
-                              category: Array.from(selectedCategories), 
-                              period: popularPeriod 
-                          } 
-                      })}
-                    >
-                      <div className={`post-thumbnail ${!thumbnailUrl ? 'no-image' : ''}`}>
-                        {thumbnailUrl && <img src={thumbnailUrl} alt="게시글 썸네일" />}
+                return (
+                  <li
+                    key={post.id}
+                    className="post-item"
+                    // 상세 페이지로 이동할 때 현재 PostListPage의 상태를 state로 전달
+                    onClick={() => navigate(`/posts/${post.id}`, { 
+                        state: { 
+                            tab: activeTab, 
+                            category: Array.from(selectedCategories), 
+                            period: popularPeriod 
+                        } 
+                    })}
+                  >
+                    {/* FIX: 썸네일이 없을 경우 기본 이미지 표시 */}
+                    <div className={`post-thumbnail ${!thumbnailUrl ? 'no-image' : ''}`}>
+                      {thumbnailUrl ? (
+                        <img src={thumbnailUrl} alt="게시글 썸네일" />
+                      ) : (
+                        <img src="https://placehold.co/150x100/E0E0E0/888888?text=No+Image" alt="No Image Placeholder" />
+                      )}
+                    </div>
+                    <div className="post-info">
+                      <h2 className="post-title">{post.title}</h2>
+                      <p className="post-summary">{summaryText || '내용이 없습니다.'}</p>
+                      <div className="post-meta">
+                        <span className="post-meta-item">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                          <span>{post.authorNickname}</span>
+                        </span>
+                        <span className="post-meta-item">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar"><path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /></svg>
+                          <span>{new Date(post.createdAt).toLocaleDateString('ko-KR')}</span>
+                        </span>
+                        <span className="post-meta-item">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
+                          <span>{post.commentCount}</span>
+                        </span>
+                        <span className="post-meta-item">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart-icon lucide-heart"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                          <span>{post.likeCount}</span>
+                        </span>
                       </div>
-                      <div className="post-info">
-                        <h2 className="post-title">{post.title}</h2>
-                        <p className="post-summary">{summaryText || '내용이 없습니다.'}</p>
-                        <div className="post-meta">
-                          <span className="post-meta-item">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-                            <span>{post.authorNickname}</span>
-                          </span>
-                          <span className="post-meta-item">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar"><path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /></svg>
-                            <span>{new Date(post.createdAt).toLocaleDateString('ko-KR')}</span>
-                          </span>
-                          <span className="post-meta-item">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
-                            <span>{post.commentCount}</span>
-                          </span>
-                          <span className="post-meta-item">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-heart-icon lucide-heart"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                            <span>{post.likeCount}</span>
-                          </span>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </main>
 
           {/* 사이드바 영역 */}

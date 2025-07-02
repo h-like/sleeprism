@@ -17,6 +17,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import Header from './components/Header';
 import MyPage from './components/MyPage';
 import SoundMixer from './components/SoundMixer';
+import PostEditPage from './pages/PostEditPage';
 
 
 
@@ -37,6 +38,7 @@ function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/posts" element={<PostListPage />} />
       <Route path="/posts/:postId" element={<PostDetailPage />} />
+      <Route path="/posts/:postId/edit" element={<PostEditPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/posts/new" element={<PostCreatePage />} />

@@ -70,16 +70,17 @@ const convertImageUrlsWithContextPath = (htmlContent: string): string => {
     let src = img.getAttribute('src');
     if (src) {
       const backendBaseUrl = 'http://localhost:8080';
-      const apiPathSegment = '/api/posts/files/';
-      // 이미 백엔드 URL로 시작하면 그대로 둠 (불필요한 중복 방지)
-      if (src.startsWith(`${backendBaseUrl}/`)) {
-        return;
-      } else if (src.startsWith(apiPathSegment)) { // /api/posts/files/ 로 시작하는 경우
-        img.setAttribute('src', backendBaseUrl + src);
-      } else if (src.startsWith('/')) { // 루트 상대 경로인 경우 (예: /uploads/...)
+      // FIX: src가 이미 backendBaseUrl로 시작하면 아무것도 하지 않습니다.
+      // HtmlSanitizer 수정으로 DB에 이미 절대 경로가 저장되기 때문입니다.
+      if (src.startsWith(backendBaseUrl)) {
+        return; 
+      }
+      // 그 외의 경우 (상대 경로인 경우)에만 backendBaseUrl을 붙입니다.
+      // (이 로직은 현재 상황에서는 거의 실행되지 않을 것입니다.
+      // 백엔드에서 상대 경로를 반환하고 Sanitizer가 이를 절대 경로로 만들지 않는 경우에 유용합니다.)
+      else if (src.startsWith('/')) { 
         img.setAttribute('src', backendBaseUrl + src);
       }
-      // 그 외의 경우 (상대 경로, 외부 URL 등)는 변경하지 않음
     }
   });
 
@@ -176,9 +177,8 @@ function PostDetailPage() {
 
   const handleEdit = () => {
     if (post) {
-      // TODO: 게시글 수정 페이지로 이동하는 로직 구현
-      console.log('게시글 수정 기능은 아직 구현되지 않았습니다.');
-    }
+    navigate(`/posts/${post.id}/edit`); // 수정 페이지로 이동
+  }
   };
 
   const handleDelete = async () => {
@@ -377,7 +377,8 @@ function PostDetailPage() {
 
   const isAuthor = currentUserId !== null && post.originalAuthorId === currentUserId;
   const showSaleRequestButton = !isAuthor && post.sellable && !post.sold;
-  const renderedContent = post ? convertImageUrlsWithContextPath(post.content) : '';
+  // FIX: convertImageUrlsWithContextPath 함수가 이제 필요하지 않으므로 직접 content를 사용합니다.
+  const renderedContent = post.content; 
 
   return ( 
     <div className="main-container">
