@@ -152,15 +152,15 @@ public class FreesoundProxyController {
   public ResponseEntity<List<SoundInfo>> getInternalSounds() {
     System.out.println("Received request for internal sounds list.");
     List<SoundInfo> internalSounds = Arrays.asList(
-        new SoundInfo("preset-wind", "바람소리", "/api/sounds/wind.mp3", 0.5),
-        new SoundInfo("preset-rain", "빗소리", "/api/sounds/rain.mp3", 0.5),
-        new SoundInfo("preset-fire", "장작 타는 소리", "/api/sounds/fire.mp3", 0.5),
-        new SoundInfo("preset-bird", "새소리", "/api/sounds/bird.mp3", 0.5),
-        new SoundInfo("preset-ocean", "파도 소리", "/api/sounds/ocean.mp3", 0.5),
-        new SoundInfo("preset-river", "개울물 소리", "/api/sounds/river.mp3", 0.5),
-        new SoundInfo("preset-bar", "카페 소리", "/api/sounds/bar.mp3", 0.5),
-        new SoundInfo("preset-underwater", "물속의 소리", "/api/sounds/underwater.mp3", 0.5),
-        new SoundInfo("preset-nature", "여름 밤의 소리", "/api/sounds/nature.mp3", 0.5)
+        new SoundInfo("preset-wind", "바람소리 🍃", "/api/sounds/wind.mp3", 0.5),
+        new SoundInfo("preset-rain", "빗소리 ☔", "/api/sounds/rain.mp3", 0.5),
+        new SoundInfo("preset-fire", "장작 타는 소리 🔥", "/api/sounds/fire.mp3", 0.5),
+        new SoundInfo("preset-bird", "새소리 🦢", "/api/sounds/bird.mp3", 0.5),
+        new SoundInfo("preset-ocean", "파도 소리 🌊", "/api/sounds/ocean.mp3", 0.5),
+        new SoundInfo("preset-river", "개울물 소리 🌿", "/api/sounds/river.mp3", 0.5),
+        new SoundInfo("preset-bar", "카페 소리 ☕", "/api/sounds/bar.mp3", 0.5),
+        new SoundInfo("preset-underwater", "수중 소리 🐠", "/api/sounds/underwater.mp3", 0.5),
+        new SoundInfo("preset-nature", "여름 밤의 소리 🌌", "/api/sounds/nature.mp3", 0.5)
     );
     return ResponseEntity.ok(internalSounds);
   }

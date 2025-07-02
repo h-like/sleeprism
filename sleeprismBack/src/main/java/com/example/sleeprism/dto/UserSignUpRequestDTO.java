@@ -12,7 +12,7 @@ import lombok.Setter;
 public class UserSignUpRequestDTO{
   @NotBlank(message = "Username cannot be blank.")
   @Size(min = 1, max = 50, message = "Username must be between 4 and 50 characters.")
-  @Pattern(regexp = "^[a-zA-Z0-9]+$", message = "Username can only contain letters and numbers.")
+  @Pattern(regexp = "^[a-zA-Z0-9가-힣]+$", message = "Username can only contain letters and numbers.")
   private String username;
 
   @NotBlank(message = "Password cannot be blank.")

@@ -103,6 +103,9 @@ public class SecurityConfig implements WebSocketMessageBrokerConfigurer {
         .authorizeHttpRequests(authorize -> authorize
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/*", "/api/files/**", "/api/comments/post/*", "/api/comments/files/**", "/api/comments/files/comments/**", "/api/sounds/**", "/api/sounds/internal/**").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/posts", "/api/posts/upload-image").authenticated() // 게시글 생성 및 이미지 업로드 인증 필요
+            .requestMatchers(HttpMethod.PUT, "/api/posts/*").authenticated() // 게시글 수정 인증 필요
+            .requestMatchers(HttpMethod.DELETE, "/api/posts/*").authenticated() // 게시글 삭제 인증 필요
             .requestMatchers("/", "/error", "/api/auth/**", "/api/users/signup", "/api/users/signin", "/oauth2/**", "/login/**", "/api/posts/files/**").permitAll()
             .requestMatchers("/files/**", "/api/freesound-search/**").permitAll()
             .requestMatchers("/api/users/profile").authenticated()

@@ -263,9 +263,13 @@ public class PostController {
       // "post-images" 디렉토리에 이미지 파일을 저장
       String relativePath = fileStorageService.uploadFile(file, "post-images");
 
-      // 클라이언트에 반환될 이미지의 완전한 URL 구성
-      // 이 URL은 나중에 `/files/{directory}/{filename}` 엔드포인트로 매핑되어 실제 파일을 제공합니다.
-      String imageUrl = "/api/posts/files/" + relativePath; // 중요: API 경로와 일치시켜야 함
+      // 수정 제안: relativePath가 이미 '/files/'로 시작하는지 확인하여 중복 방지
+      String imageUrl;
+      if (relativePath.startsWith("/files/")) {
+        imageUrl = "/api/posts" + relativePath; // 이미 /files/로 시작하면 /api/posts만 붙임
+      } else {
+        imageUrl = "/api/posts/files/" + relativePath; // 아니면 기존처럼 /api/posts/files/를 붙임
+      }
 
       // Quill.js가 기대하는 형식으로 URL 반환 (JSON 객체 {"url": "..."})
       return ResponseEntity.ok(Map.of("url", imageUrl));
