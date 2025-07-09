@@ -1,129 +1,66 @@
-// src/main/java/com/example/sleeprism/jwt/JwtAuthenticationFilter.java
 package com.example.sleeprism.jwt;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 @Slf4j
+@RequiredArgsConstructor // @Component 어노테이션이 있으므로 final 필드에 대한 생성자가 자동 주입됩니다.
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtTokenProvider jwtTokenProvider;
-  private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-  // 이 필터가 JWT 토큰 검사를 수행하지 않을 (건너뛸) URI 패턴 목록입니다.
-  // 이 경로는 Context Path가 제거된 상태로 매칭될 것입니다.
-  private static final List<String> EXCLUDE_URLS = Arrays.asList(
-      "/", // 루트 경로 (Context Path 없이)
-      "/error",
-      "/api/auth/**", // 인증 관련 API (로그인, 회원가입 등)
-      "/api/users/signup", // 회원가입
-      "/api/users/signin", // 로그인 (POST)
-      "/oauth2/**", // OAuth2 로그인 관련 경로
-      "/login/**",  // OAuth2 로그인 관련 경로
-      "/api/files/**", // 일반 파일 접근
-      "/api/posts/files/**", // 게시글 첨부 파일(이미지 등) 제공 URL
-      "/test.html", // <-- test.html 파일 경로 추가 (Context Path 제외)
-      "/ws/**",     // <-- 웹소켓 핸드셰이크 경로 추가 (Context Path 제외)
-      "/raw-ws/**"  // <-- 일반 웹소켓 엔드포인트 추가 (Context Path 제외)
-  );
+  /**
+   * 모든 요청에 대해 이 필터가 실행됩니다.
+   * shouldNotFilter 로직을 제거하여 SecurityConfig에서 경로 관리를 일원화합니다.
+   */
+  @Override
+  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
 
-  public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
-    this.jwtTokenProvider = jwtTokenProvider;
+    // 1. 요청 헤더에서 JWT 토큰 추출
+    String token = getJwtFromRequest(request);
+
+    // 2. 토큰이 존재하고 유효한 경우에만 인증 정보 설정
+    try {
+      if (token != null && jwtTokenProvider.validateToken(token)) {
+        // 토큰이 유효하면 인증 정보를 SecurityContext에 저장
+        Authentication authentication = jwtTokenProvider.getAuthentication(token);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("Authentication successful for user: '{}', URI: {}", authentication.getName(), request.getRequestURI());
+      }
+    } catch (Exception e) {
+      // 토큰 유효성 검사 중 예외 발생 시 로그 기록 (연결을 끊지 않고 다음 필터로 계속 진행)
+      log.warn("Invalid JWT Token: {} for URI: {}. Error: {}", token, request.getRequestURI(), e.getMessage());
+    }
+
+    // 3. 다음 필터로 요청 전달
+    filterChain.doFilter(request, response);
   }
 
+  /**
+   * 요청 헤더에서 'Authorization' 필드의 Bearer 토큰을 추출하는 헬퍼 메소드
+   */
   private String getJwtFromRequest(HttpServletRequest request) {
     String bearerToken = request.getHeader("Authorization");
     if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-      return bearerToken.substring(7); // "Bearer " 이후의 토큰만 추출
+      return bearerToken.substring(7);
     }
     return null;
   }
 
-  @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-    String requestURI = request.getRequestURI();
-    log.info("Processing JWT authentication for URI: {}", requestURI);
-
-    try {
-      String jwt = getJwtFromRequest(request);
-      log.debug("Extracted JWT: {}", jwt != null ? jwt.substring(0, Math.min(jwt.length(), 30)) + "..." : "No JWT found");
-
-      if (jwt != null && jwtTokenProvider.validateToken(jwt)) {
-        log.info("JWT token is present and valid. Attempting to set authentication.");
-        Authentication authentication = jwtTokenProvider.getAuthentication(jwt);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        log.info("Authentication set successfully for user: {}", authentication.getName());
-      } else if (jwt != null) {
-        log.warn("JWT token found but validation failed for URI: {}", requestURI);
-      } else {
-        log.info("No JWT token found in request for URI: {}", requestURI);
-      }
-    } catch (Exception ex) {
-      log.error("Could not set user authentication in security context for URI: {}. Error: {}", requestURI, ex.getMessage(), ex);
-    }
-
-    filterChain.doFilter(request, response);
-  }
-
-  @Override
-  protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-    String requestUri = request.getRequestURI();
-    String requestMethod = request.getMethod();
-
-    // Context Path 제거: /sleeprism/api/posts -> /api/posts 로 변환
-    String pathWithoutContext = requestUri.startsWith("/sleeprism") ?
-        requestUri.substring("/sleeprism".length()) :
-        requestUri;
-    // Context Path 제거 후 빈 문자열이 되는 경우 (예: /sleeprism 만 요청한 경우) "/"로 설정
-    if (pathWithoutContext.isEmpty()) {
-      pathWithoutContext = "/";
-    }
-
-    log.debug("shouldNotFilter check for URI: {}, Method: {}, Path without context: {}", requestUri, requestMethod, pathWithoutContext);
-
-
-    // OPTIONS 요청은 항상 필터를 건너뜝니다. (CORS Preflight)
-    if (requestMethod.equals(HttpMethod.OPTIONS.name())) {
-      log.info("Skipping JWT filter for OPTIONS request: {}", requestUri);
-      return true;
-    }
-
-    // 게시글 목록 및 상세 조회 (GET 요청)는 JWT 필터를 건너뜝니다.
-    if (requestMethod.equals(HttpMethod.GET.name())) {
-      if (pathMatcher.match("/api/posts", pathWithoutContext) ||
-          pathMatcher.match("/api/posts/*", pathWithoutContext) ||
-          pathMatcher.match("/api/comments/files/comment/*", pathWithoutContext) ||
-          pathMatcher.match("/api/sounds/*", pathWithoutContext) ||
-          pathMatcher.match("/api/comments/post/*", pathWithoutContext)) {
-        log.info("Skipping JWT filter for GET request to public posts URI (after context path removal): {}", pathWithoutContext);
-        return true;
-      }
-    }
-
-    // EXCLUDE_URLS에 명시된 다른 공개 경로들은 HTTP 메서드와 상관없이 필터를 건너뜁니다.
-    for (String excludeUrlPattern : EXCLUDE_URLS) {
-      log.debug("  Matching against pattern: {}", excludeUrlPattern);
-      if (pathMatcher.match(excludeUrlPattern, pathWithoutContext)) {
-        log.info("Skipping JWT filter for general public URI (after context path removal): {} matched by pattern {}", pathWithoutContext, excludeUrlPattern);
-        return true;
-      }
-    }
-
-    log.info("JWT filter WILL BE APPLIED for URI: {}", requestUri);
-    return false; // 위에 해당하지 않는 모든 요청에 대해서는 필터를 실행합니다.
-  }
+  /**
+   * shouldNotFilter 메소드를 제거하여 모든 요청이 이 필터를 거치도록 합니다.
+   * 이제 특정 경로를 제외하는 로직은 SecurityConfig에서만 관리됩니다.
+   */
 }

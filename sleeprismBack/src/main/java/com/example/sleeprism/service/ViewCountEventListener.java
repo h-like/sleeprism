@@ -1,58 +1,50 @@
 package com.example.sleeprism.service;
 
-import com.example.sleeprism.event.ViewCountIncrementEvent;
 import com.example.sleeprism.entity.Post;
+import com.example.sleeprism.event.ViewCountIncrementEvent;
 import com.example.sleeprism.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
-import org.springframework.orm.ObjectOptimisticLockingFailureException; // 이 임포트 추가
-import org.springframework.scheduling.annotation.Async; // @Async 어노테이션 사용 시 필요
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // 트랜잭션 관리를 위해 추가
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class ViewCountEventListener {
 
   private final PostRepository postRepository;
 
-  @Async // 비동기로 이벤트 처리
+  /**
+   * 게시글 조회수 증가 이벤트를 비동기적으로 처리합니다.
+   * @Async: 이 메소드를 별도의 스레드에서 실행합니다.
+   * @Transactional(propagation = Propagation.REQUIRES_NEW):
+   * - 이 메소드가 항상 새로운 트랜잭션에서 실행되도록 보장합니다.
+   * - 이를 통해 게시글을 조회하는 원래 트랜잭션과의 충돌을 방지하고,
+   * 'OptimisticLockingFailureException'을 해결합니다.
+   */
+  @Async
   @EventListener
-  @Transactional // 트랜잭션 내에서 실행
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void handleViewCountIncrement(ViewCountIncrementEvent event) {
-    Long postId = event.getPostId();
-    int maxRetries = 3; // 최대 재시도 횟수
-    long retryDelayMs = 100; // 재시도 간 지연 시간 (밀리초)
+    try {
+      log.info("조회수 증가 이벤트 수신: postId={}", event.getPostId());
+      Post post = postRepository.findById(event.getPostId())
+          .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다: " + event.getPostId()));
 
-    for (int retryCount = 0; retryCount < maxRetries; retryCount++) {
-      try {
-        // postId로 Post 엔티티를 조회하고, 조회수 증가
-        Post post = postRepository.findById(postId)
-            .orElseThrow(() -> new IllegalArgumentException("Post not found with ID: " + postId));
+      // 엔티티의 상태를 직접 변경하는 대신, 엔티티가 제공하는 비즈니스 메소드를 호출합니다.
+      post.incrementViewCount();
 
-        post.incrementViewCount(); // 조회수 증가
-        postRepository.saveAndFlush(post); // 변경사항 즉시 DB 반영
-        log.info("View count for post {} incremented successfully. (Retry: {})", postId, retryCount);
-        return; // 성공 시 메서드 종료
-      } catch (ObjectOptimisticLockingFailureException e) {
-        // 옵티미스틱 락킹 실패 시 재시도
-        log.warn("Optimistic locking failure while incrementing view count for post {}. Retrying... (Attempt {}/{})", postId, retryCount + 1, maxRetries);
-        if (retryCount < maxRetries - 1) {
-          try {
-            Thread.sleep(retryDelayMs); // 잠시 대기 후 재시도
-          } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            log.error("Thread interrupted during retry delay.", ie);
-            break; // 인터럽트 발생 시 루프 종료
-          }
-        }
-      } catch (Exception e) {
-        log.error("An unexpected error occurred while incrementing view count for post {}: {}", postId, e.getMessage(), e);
-        break; // 다른 유형의 오류 발생 시 재시도 없이 종료
-      }
+      postRepository.save(post);
+      log.info("게시글 ID {}의 조회수가 성공적으로 증가했습니다.", post.getId());
+    } catch (OptimisticLockingFailureException e) {
+      log.warn("조회수 증가 중 동시성 충돌 발생 (postId: {}). 재시도하지 않음: {}", event.getPostId(), e.getMessage());
+    } catch (Exception e) {
+      log.error("조회수 증가 처리 중 예외 발생 (postId: {}): {}", event.getPostId(), e.getMessage());
     }
-    log.error("Failed to increment view count for post {} after {} retries.", postId, maxRetries);
   }
 }
