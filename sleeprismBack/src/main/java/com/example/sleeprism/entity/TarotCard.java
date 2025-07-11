@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 /**
  * 타로 카드 한 장의 정보를 담는 엔티티입니다.
  * 앱 내에서 정적인 마스터 데이터로 사용됩니다.
+ * db에 담길 내용 노션에 참고
  */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
