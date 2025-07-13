@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CommentCreateRequestDTO, CommentResponseDTO } from '../type/comment'; // ImageUploadResponse는 이제 직접 사용하지 않음
 import '../../public/css/CommentSection.css';
+import '../../public/css/PostDetailPage.css'
 import type { UserProfile } from '../service/UserService';
 
 // JWT 토큰에서 사용자 ID를 디코딩하는 헬퍼 함수

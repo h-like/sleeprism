@@ -26,6 +26,20 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/freesound-search/, '/api/freesound-search'),
       },
+      // 웹소켓 엔드포인트에 대한 프록시 설정
+      '/ws': { // 백엔드의 웹소켓 엔드포인트 경로 (예: http://localhost:8080/ws)
+        target: 'http://localhost:8080', // 백엔드 서버 주소
+        ws: true, // WebSocket 프록시 활성화!
+        changeOrigin: true, // 대상 호스트의 원본을 변경
+        secure: false, // HTTPS 백엔드인 경우 SSL 인증서 유효성 검사를 무시 (개발 환경에서 유용)
+        // rewrite: (path) => path.replace(/^\/ws/, ''), // 필요하다면 경로 재작성 (대부분의 경우 '/ws'는 그대로 사용)
+      },
+      // 일반 REST API 엔드포인트에 대한 프록시 설정 (필요하다면 추가)
+      '/api': { // 백엔드의 API 경로 (예: http://localhost:8080/api)
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   define: {

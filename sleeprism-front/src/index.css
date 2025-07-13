@@ -1,3 +1,10 @@
+
+/* --- 이 세 줄을 파일의 가장 위에 추가합니다 --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- 아래는 기존에 있던 CSS 코드입니다 (그대로 둡니다) --- */
 /* 전역 CSS 파일 (예: index.css) */
 
 /* 기본 라이트 모드 (light-mode 클래스 없어도 기본값으로 적용) */

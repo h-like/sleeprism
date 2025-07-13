@@ -309,12 +309,12 @@ function PostEditPage() {
   }
 
   return (
-    <div className="login-container">
-      <div className="login-card create-post-card">
+    <div className="main-container">
+      <div className=" post-create-wraper ">
         <h1 className="login-title">
           게시글 수정
         </h1>
-        <form className="login-form" onSubmit={handleSubmit}>
+        <form className="post-form" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="title" className="text-1 block text-sm font-medium mb-1">
               제목
@@ -324,7 +324,7 @@ function PostEditPage() {
               id="title"
               name="title"
               required
-              className="login-input"
+              className="post-input my-post-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="게시글 제목을 입력하세요."
@@ -339,7 +339,7 @@ function PostEditPage() {
               id="category"
               name="category"
               required
-              className="login-input"
+              className="post-input"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
@@ -370,11 +370,11 @@ function PostEditPage() {
 
           {error && <p className="login-error-message">{error}</p>}
 
-          <div>
+          <div className='center'>
             <button
               type="submit"
               disabled={loading || isImageUploading}
-              className="login-button"
+              className="btn-hover color-3"
             >
               {loading ? '수정 중...' : '게시글 수정'}
             </button>
@@ -382,7 +382,7 @@ function PostEditPage() {
               type="button"
               onClick={() => navigate(`/posts/${postId}`)}
               disabled={loading || isImageUploading}
-              className="login-button secondary-button mt-2"
+              className="btn-hover color-11"
             >
               취소
             </button>

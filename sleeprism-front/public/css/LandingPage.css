@@ -1,0 +1,497 @@
+/* * =============================================
+ * CSS 변수 선언부 (테마 관리)
+ * =============================================
+ */
+
+/* 기본 테마: 다크 모드 */
+:root {
+    --bg-primary: #000000;
+    --bg-secondary: #1a1a1c;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1a6;
+    --accent-primary: #2997ff;
+    --border-color: #3a3a3c;
+    --font-main: 'Noto Sans KR', 'Inter', sans-serif;
+    --tag-blue-bg: rgba(59, 130, 246, 0.2);
+    --tag-blue-text: #93c5fd;
+    --tag-purple-bg: rgba(168, 85, 247, 0.2);
+    --tag-purple-text: #d8b4fe;
+}
+
+/* 라이트 모드 */
+body.light-mode {
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F5F5F7;
+    --text-primary: #1D1D1F;
+    --text-secondary: #6E6E73;
+    --accent-primary: #0066CC;
+    --border-color: #D2D2D7;
+    --tag-blue-bg: #D6E9FF;
+    --tag-blue-text: #0058D6;
+    --tag-purple-bg: #EEDFFF;
+    --tag-purple-text: #7227E0;
+}
+
+
+/* =============================================
+ * 기본 & 전체 스타일
+ * ============================================= */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.landing-page {
+    width: 100%;
+    overflow-x: hidden;
+}
+
+.container {
+    width: 100%;
+    max-width: 1280px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem; /* 24px */
+    padding-right: 1.5rem; /* 24px */
+}
+
+@media (min-width: 768px) {
+    .container {
+        padding-left: 2.5rem; /* 40px */
+        padding-right: 2.5rem; /* 40px */
+    }
+}
+
+/* =============================================
+ * 스크롤 애니메이션
+ * ============================================= */
+.fade-in-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.fade-in-on-scroll.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* =============================================
+ * 1. 히어로 섹션 (Hero Section)
+ * ============================================= */
+.hero-section {
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+.video-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+.video-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    opacity: 0.5;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 10;
+    padding: 0 1rem;
+}
+
+.hero-title {
+    font-size: 2.8rem; /* 48px */
+    font-weight: 900;
+    color: white;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+}
+
+.hero-subtitle {
+    margin-top: 1.5rem;
+    font-size: 1.125rem; /* 18px */
+    color: #e5e7eb; /* gray-200 */
+    max-width: 42rem; /* 672px */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-button {
+    margin-top: 3rem;
+    display: inline-block;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.hero-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+@media (min-width: 768px) {
+    .hero-title {
+        font-size: 5rem; /* 80px */
+    }
+    .hero-subtitle {
+        font-size: 1.5rem; /* 24px */
+    }
+}
+
+/* =============================================
+ * 공통 섹션 스타일
+ * ============================================= */
+.section-header {
+    text-align: center;
+    margin-bottom: 4rem; /* 64px */
+}
+
+.section-title {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+.section-title-small {
+    font-size: 2.25rem; /* 36px */
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.section-description {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    max-width: 640px;
+    margin: 1rem auto 0;
+}
+
+@media (min-width: 768px) {
+    .section-header {
+        margin-bottom: 6rem; /* 96px */
+    }
+    .section-title {
+        font-size: 5rem;
+    }
+    .section-title-small {
+        font-size: 3.75rem; /* 60px */
+    }
+    .section-description {
+        font-size: 1.5rem;
+    }
+}
+
+/* =============================================
+ * 2. 서비스 소개 섹션 (Features Section)
+ * ============================================= */
+.features-section {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+    background-color: var(--bg-secondary);
+    transition: background-color 0.3s ease;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+.feature-item {
+    background-color: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 1.5rem; /* 24px */
+    transition: background-color 0.3s ease;
+}
+
+.feature-image {
+    border-radius: 1rem; /* 16px */
+    margin-bottom: 1.5rem;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+}
+
+.feature-title {
+    font-size: 1.5rem; /* 24px */
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.feature-description {
+    margin-top: 0.5rem;
+    color: var(--text-secondary);
+}
+
+@media (min-width: 768px) {
+    .features-section {
+        padding-top: 8rem;
+        padding-bottom: 8rem;
+    }
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 1024px) {
+    .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+
+/* =============================================
+ * 3. 인기 게시글 섹션 (Popular Posts Section)
+ * ============================================= */
+.popular-posts-container {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+}
+
+.loading-text, .error-text {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem 0;
+}
+.error-text {
+    color: #ff4d4f;
+}
+
+.popular-posts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+.post-card {
+    background-color: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    border: 1px solid var(--border-color);
+    transition: border-color 0.3s, background-color 0.3s;
+    cursor: pointer;
+}
+
+.post-card:hover {
+    border-color: var(--accent-primary);
+}
+
+.post-card-title {
+    font-weight: 700;
+    font-size: 1.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+}
+
+.post-card-author {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.post-card-summary {
+    margin-top: 1rem;
+    height: 4.5em; /* 약 3줄 */
+    line-height: 1.5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+}
+
+.post-card-meta {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.post-card-tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-weight: 500;
+}
+
+.post-card-tag.blue { background-color: var(--tag-blue-bg); color: var(--tag-blue-text); }
+.post-card-tag.purple { background-color: var(--tag-purple-bg); color: var(--tag-purple-text); }
+
+
+@media (min-width: 768px) {
+    .popular-posts-container {
+        padding-top: 8rem;
+        padding-bottom: 8rem;
+    }
+    .popular-posts-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 1024px) {
+    .popular-posts-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+
+/* =============================================
+ * 4. 꿈 마켓플레이스 섹션 (Marketplace Section)
+ * ============================================= */
+.marketplace-section {
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+    background-color: var(--bg-primary);
+    transition: background-color 0.3s ease;
+}
+
+.marketplace-item {
+    margin-top: 4rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    gap: 3rem;
+}
+
+.marketplace-item.reverse .marketplace-text {
+    order: 2;
+}
+.marketplace-item.reverse .marketplace-image-container {
+    order: 1;
+}
+
+.marketplace-text {
+    text-align: center;
+}
+
+.marketplace-title {
+    font-size: 2.25rem; /* 36px */
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-primary);
+}
+
+.marketplace-description {
+    margin-top: 1.5rem;
+    font-size: 1.125rem; /* 18px */
+    color: var(--text-secondary);
+    max-width: 28rem; /* 448px */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.marketplace-link {
+    margin-top: 2rem;
+    display: inline-block;
+    color: var(--accent-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+.marketplace-link:hover {
+    text-decoration: underline;
+}
+
+.marketplace-image {
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+    width: 100%;
+}
+
+@media (min-width: 1024px) {
+    .marketplace-section {
+        padding-top: 10rem;
+        padding-bottom: 10rem;
+    }
+    .marketplace-item {
+        margin-top: 8rem;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 5rem;
+    }
+    .marketplace-text {
+        text-align: left;
+    }
+    .marketplace-description {
+        margin-left: 0;
+    }
+    .marketplace-title {
+        font-size: 3.75rem; /* 60px */
+    }
+    .marketplace-description {
+        font-size: 1.25rem; /* 20px */
+    }
+}
+
+/* =============================================
+ * 플로팅 버튼 (테마, 스크롤 투 탑)
+ * ============================================= */
+.theme-toggle-button,
+.scroll-to-top-button {
+    position: fixed;
+    z-index: 1000;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.theme-toggle-button:hover,
+.scroll-to-top-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.theme-toggle-button svg,
+.scroll-to-top-button svg {
+    width: 24px;
+    height: 24px;
+}
+
+.theme-toggle-button {
+    bottom: 2rem;
+    left: 2rem; /* 테마 버튼과 겹치지 않도록 왼쪽으로 배치 */
+}
+
+.scroll-to-top-button {
+    bottom: 2rem;
+    right: 2rem;
+    
+}

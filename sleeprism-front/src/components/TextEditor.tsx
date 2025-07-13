@@ -4,6 +4,8 @@ import { EditorContent } from '@tiptap/react'; // useEditor는 여기서 사용�
 import { Editor } from '@tiptap/core'; // Editor 타입 임포트
 import { useTheme } from '../contexts/ThemeContext'; // 다크 모드 테마 컨텍스트 임포트
 import '../styles/TiptopEditor.css'; // CSS 파일 임포트
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
 
 interface TextEditorProps {
   editor: Editor | null; // Tiptap Editor 인스턴스

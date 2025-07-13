@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../../public/css/PostListPage.css';
+import ScrollToTopButton from '../components/ScrollToTopButton';
 
 interface Post {
   id: number;
@@ -372,6 +373,7 @@ function PostListPage() {
 
   return (
     <div className="main-container">
+      <ScrollToTopButton />
       <div className="content-wrapper">
         <div className="flex flex-col lg:flex-row lg:space-x-8">
           <main className="lg:w-2/3 w-full">

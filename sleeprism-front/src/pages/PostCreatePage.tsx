@@ -157,12 +157,12 @@ function PostCreatePage() {
   };
 
   return (
-    <div className="login-container"> {/* 기존 bg-gray-50 -> login-container (몽환적 배경) */}
-      <div className="login-card create-post-card"> {/* max-w-3xl ... -> login-card */}
-        <h1 className="login-title"> {/* text-3xl font-bold ... -> login-title */}
+    <div className="main-container"> 
+      <div className="post-create-wraper">
+        <h1 className="login-title">
           새 게시글 작성
         </h1>
-        <form className="login-form" onSubmit={handleSubmit}> {/* space-y-6 -> login-form */}
+        <form className="post-form" onSubmit={handleSubmit}> {/* space-y-6 -> login-form */}
           <div>
             <label htmlFor="title" className="text-1 block text-sm font-medium mb-1"> {/* text-gray-700 -> text-1 */}
               제목
@@ -172,31 +172,30 @@ function PostCreatePage() {
               id="title"
               name="title"
               required
-              className="login-input" 
-// {/* mt-1 block ... -> login-input */}
+              className="post-input my-post-title" 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="게시글 제목을 입력하세요."
             />
           </div>
 
-          <div>
-            <label htmlFor="category" className="text-1 block text-sm font-medium mb-1"> {/* text-gray-700 -> text-1 */}
-              카테고리
-            </label>
-            <select
-              id="category"
-              name="category"
-              required
-              className="login-input" // /* Tailwind select 대신 login-input 재사용 (외형 일관성) */
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="DREAM_DIARY">꿈 다이어리</option>
-              <option value="SLEEP_INFO">수면 정보</option>
-              <option value="FREE_TALK">자유 게시판</option>
-            </select>
-          </div>
+          <div className="select-wrapper">
+            <label htmlFor="category" className="text-1 block text-sm font-medium mb-1">
+                카테고리
+            </label>
+            <select
+                id="category"
+                name="category"
+                required
+                className="post-input"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+            >
+                <option value="DREAM_DIARY">꿈 다이어리</option>
+                <option value="SLEEP_INFO">수면 정보</option>
+                <option value="FREE_TALK">자유 게시판</option>
+            </select>
+            </div>
 
           <div>
             <label className="text-1 block text-sm font-medium mb-1"> {/* text-gray-700 -> text-1 */}

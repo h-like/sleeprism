@@ -3,7 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import CommentSection from '../components/CommentSection';
 import SaleRequestModal from '../components/SaleRequestModal';
 import { createOrGetSingleChatRoom } from '../service/ChatService';
+import DreamInterpretationModal from '../components/DreamInterpretationModal';
 import '../../public/css/PostDetailPage.css'; // 새로운 CSS 파일을 사용할 예정입니다.
+import ScrollToTopButton from '../components/ScrollToTopButton';
 
 // Post 데이터의 타입 정의 (백엔드 PostResponseDTO와 일치해야 합니다)
 interface PostDetail {
@@ -106,6 +108,9 @@ function PostDetailPage() {
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
   const [likeCount, setLikeCount] = useState<number>(0);
   const [bookmarkCount, setBookmarkCount] = useState<number>(0);
+
+   // 꿈 해몽 모달의 상태를 관리하기 위한 state 추가
+  const [isInterpretationModalOpen, setIsInterpretationModalOpen] = useState<boolean>(false);
 
   // 게시글 데이터 및 좋아요/북마크 상태를 새로고침하는 함수
   const refreshPostData = useCallback(async () => {
@@ -216,6 +221,7 @@ function PostDetailPage() {
   };
 
   const handleOpenSaleRequestModal = () => {
+    console.log("'판매 요청하기' 버튼 클릭됨!"); // <-- 이 로그가 찍히는지 확인
     const token = localStorage.getItem('jwtToken');
     if (!token) {
       alert('판매 요청을 하려면 로그인이 필요합니다.');
@@ -223,6 +229,7 @@ function PostDetailPage() {
       return;
     }
     setIsSaleRequestModalOpen(true);
+     console.log('isSaleRequestModalOpen 상태를 true로 변경 시도!');
   };
 
   const handleCloseSaleRequestModal = () => {
@@ -242,7 +249,13 @@ function PostDetailPage() {
     try {
       const chatRoom = await createOrGetSingleChatRoom(post.originalAuthorId);
       alert(`${post.authorNickname}님과의 채팅방으로 이동합니다.`);
-      navigate(`/chat/${chatRoom.id}`);
+      
+       navigate(`/chat/${chatRoom.id}`, { 
+      state: { 
+        roomName: post.authorNickname 
+      } 
+    });
+    
     } catch (err: any) {
       console.error('채팅방 생성 또는 조회 실패:', err);
       alert(`채팅 시작 실패: ${err.message}`);
@@ -380,11 +393,19 @@ function PostDetailPage() {
   // FIX: convertImageUrlsWithContextPath 함수가 이제 필요하지 않으므로 직접 content를 사용합니다.
   const renderedContent = post.content; 
 
+   // 꿈 해몽 버튼을 보여줄지 결정하는 조건 (예: 카테고리가 '꿈'일 경우)
+  const showInterpretationButton = post.category === 'DREAM_DIARY'; // 백엔드 카테고리 값에 따라 'DREAM', '꿈' 등으로 변경
+ console.log('--- 렌더링 정보 ---');
+  console.log('현재 post 데이터:', post);
+  console.log('모달 열림 상태 (isSaleRequestModalOpen):', isSaleRequestModalOpen); // <-- 이 로그 추가
+
+
   return ( 
     <div className="main-container">
+      <ScrollToTopButton />
       <div className="post-detail-wrapper">
         <div className="post-header-section">
-          <div className="post-author-info">
+          <div className="post-author-info"  onClick={() => navigate(`/chat`)} style={{ cursor: 'pointer' }}>
             <div className="author-avatar">
               {/* 백엔드에서 authorProfileImageUrl을 제공하면 사용, 아니면 placeholder 사용 */}
               <img 
@@ -470,6 +491,18 @@ function PostDetailPage() {
               <span>판매 요청하기</span>
             </button>
           )}
+
+           {/* --- [추가] 꿈 해몽하기 버튼 --- */}
+          {showInterpretationButton && currentUserId && (
+            <button
+              onClick={() => setIsInterpretationModalOpen(true)}
+              className="action-button dream-button" // 새로운 스타일을 위한 클래스
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-wand-sparkles mr-1"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L11.8 9.2a1.21 1.21 0 0 0 0 1.72l8.84 8.84a1.21 1.21 0 0 0 1.72 0l1.28-1.28a1.21 1.21 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/><path d="M18 21v-2"/><path d="M13 17H9"/></svg>
+              <span>AI 꿈 해몽하기</span>
+            </button>
+          )}
+
           <button
             onClick={handleBackToList} // 수정된 핸들러 사용
             className="action-button secondary-button"
@@ -494,6 +527,14 @@ function PostDetailPage() {
           postTitle={post.title}
           onClose={handleCloseSaleRequestModal}
           onSuccess={refreshPostData}
+        />
+      )}
+
+       {/* --- [추가] 조건부로 꿈 해몽 모달 렌더링 --- */}
+      {isInterpretationModalOpen && post && (
+        <DreamInterpretationModal
+          postId={post.id}
+          onClose={() => setIsInterpretationModalOpen(false)}
         />
       )}
     </div>
