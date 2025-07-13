@@ -88,6 +88,7 @@ public class SecurityConfig {
             .requestMatchers("/api/posts", "/api/posts/{postId}").permitAll()
             .requestMatchers("/files/profile-images/**", "/api/comments/post/**").permitAll()
             .requestMatchers("/files/**", "/images/**").permitAll()
+            .requestMatchers("/sale-requests/**").authenticated()
             // 나머지 모든 요청은 인증을 요구합니다.
             .anyRequest().authenticated()
         )

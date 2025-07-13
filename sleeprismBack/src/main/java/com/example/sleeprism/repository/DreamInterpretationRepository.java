@@ -21,4 +21,7 @@ public interface DreamInterpretationRepository extends JpaRepository<DreamInterp
 
   // 특정 사용자가 요청한 모든 해몽 기록 조회 (최신순)
   List<DreamInterpretation> findByUserOrderByInterpretedAtDesc(User user);
+
+  // 특정 게시글과 사용자에 대한 가장 최신 해몽 기록 1개만 조회
+  Optional<DreamInterpretation> findFirstByPostAndUserOrderByCreatedAtDesc(Post post, User user);
 }

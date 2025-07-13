@@ -28,10 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient; // WebClient로 변경
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -62,36 +59,45 @@ public class DreamInterpretationService {
     Post post = postRepository.findByIdAndIsDeletedFalse(requestDto.getPostId())
         .orElseThrow(() -> new EntityNotFoundException("Post not found or deleted with ID: " + requestDto.getPostId()));
 
-    // 1. 입력값 전처리 (HTML 태그 제거)
+    // --- [로직 개선] 기존 해몽 기록이 있는지 먼저 확인 ---
+    Optional<DreamInterpretation> existingInterpretation = dreamInterpretationRepository.findFirstByPostAndUserOrderByCreatedAtDesc(post, user);
+
+    if (existingInterpretation.isPresent()) {
+      log.info("기존 해몽 기록을 찾았습니다. Post ID: {}, User ID: {}", post.getId(), userId);
+      // 기존 기록이 있으면 DTO로 변환해서 바로 반환 (AI 호출 안함)
+      return buildResponseDTO(existingInterpretation.get());
+    }
+
+    log.info("기존 해몽 기록이 없습니다. 새로운 해몽을 생성합니다. Post ID: {}, User ID: {}", post.getId(), userId);
+
+    // --- 기존 기록이 없을 때만 AI 호출 및 새 기록 생성 ---
     String rawContent = post.getContent();
     String sanitizedContent = Jsoup.clean(rawContent, Safelist.none());
 
-    // 2. 프롬프트 생성
     String prompt = String.format(
         "다음 꿈 내용을 해몽해주세요. 꿈의 상징들을 분석하고, 심리적인 의미, 가능한 미래 암시 등 다양한 관점에서 %d가지의 간결한 해석을 각각 JSON 형태로 반환해주세요. 각 해석은 'title'과 'content' 필드를 포함해야 합니다. 꿈 내용: \"%s\"",
         numInterpretationOptions, sanitizedContent
     );
 
-    // 3. WebClient를 사용하여 Gemini API 호출
     String aiResponseJson;
     try {
       aiResponseJson = callGeminiApi(prompt);
     } catch (Exception e) {
-      log.error("Failed to call Gemini API for post {}: {}", post.getId(), e.getMessage(), e);
+      log.error("Gemini API 호출 실패. Post ID: {}: {}", post.getId(), e.getMessage(), e);
+      // 프론트에서 에러 메시지를 표시할 수 있도록 DTO에 담아 반환
       return DreamInterpretationResponseDTO.builder()
           .errorMessage("꿈 해몽 AI API 호출에 실패했습니다: " + e.getMessage())
           .build();
     }
 
-    // 4. 엔티티 저장
-    DreamInterpretation dreamInterpretation = DreamInterpretation.builder()
+    DreamInterpretation newInterpretation = DreamInterpretation.builder()
         .post(post)
         .user(user)
         .aiResponseContent(aiResponseJson)
+        .selectedInterpretationIndex(null) // 처음엔 선택 안됨
         .build();
-    DreamInterpretation savedInterpretation = dreamInterpretationRepository.save(dreamInterpretation);
+    DreamInterpretation savedInterpretation = dreamInterpretationRepository.save(newInterpretation);
 
-    // 5. 최종 응답 DTO 생성 후 반환
     return buildResponseDTO(savedInterpretation);
   }
 
@@ -100,18 +106,43 @@ public class DreamInterpretationService {
   public DreamInterpretationResponseDTO selectInterpretationOption(
       Long interpretationId, DreamInterpretationSelectRequestDTO requestDto, Long userId) {
     DreamInterpretation dreamInterpretation = dreamInterpretationRepository.findById(interpretationId)
-        .orElseThrow(() -> new EntityNotFoundException("Dream interpretation not found with ID: " + interpretationId));
+        .orElseThrow(() -> new EntityNotFoundException("해몽 기록을 찾을 수 없습니다: " + interpretationId));
 
     if (!dreamInterpretation.getUser().getId().equals(userId)) {
-      throw new IllegalArgumentException("You do not have permission to select an option for this interpretation.");
+      throw new IllegalArgumentException("이 해몽을 선택할 권한이 없습니다.");
     }
 
-    TarotCard selectedTarotCard = tarotCardRepository.findById(requestDto.getSelectedTarotCardId())
-        .orElseThrow(() -> new EntityNotFoundException("Selected Tarot Card not found with ID: " + requestDto.getSelectedTarotCardId()));
+    // --- [로직 개선] ---
+    // 프론트엔드에서 이미 UI가 즉시 업데이트되므로, 백엔드는 조용히 저장만 합니다.
+    // 하지만 일관성을 위해 업데이트된 전체 DTO를 반환하는 것이 좋습니다.
+    // DTO를 만들 때 사용된 카드 정보를 정확히 찾기 위해, AI 응답 원본을 파싱합니다.
+    try {
+      Map<String, List<Map<String, String>>> aiResponseMap = objectMapper.readValue(
+          dreamInterpretation.getAiResponseContent(), new TypeReference<>() {}
+      );
+      List<Map<String, String>> interpretationsData = aiResponseMap.getOrDefault("interpretations", List.of());
 
-    dreamInterpretation.selectInterpretation(requestDto.getSelectedOptionIndex(), selectedTarotCard);
+      // 선택된 카드를 찾기 위해, 프론트엔드와 동일한 로직으로 랜덤 카드를 다시 생성합니다.
+      // (주의: 이 방식은 100% 일치하지 않을 수 있으므로, 더 나은 방법은 해몽 생성 시 카드 ID를 AI 응답과 함께 저장하는 것입니다.)
+      // 현재 구조에서는 이 방식이 최선입니다.
+      List<TarotCard> randomCards = tarotCardRepository.findRandomCards(numInterpretationOptions);
+
+      Integer selectedIndex = requestDto.getSelectedOptionIndex();
+      if (selectedIndex != null && selectedIndex < randomCards.size()) {
+        TarotCard selectedCard = randomCards.get(selectedIndex);
+        dreamInterpretation.selectInterpretation(selectedIndex, selectedCard);
+      } else {
+        throw new EntityNotFoundException("선택된 타로 카드를 찾을 수 없습니다: " + requestDto.getSelectedTarotCardId());
+      }
+
+    } catch (JsonProcessingException e) {
+      log.error("AI 응답 파싱 실패: {}", e.getMessage());
+      throw new IllegalStateException("AI 응답 처리 중 오류가 발생했습니다.");
+    }
+
     return buildResponseDTO(dreamInterpretation);
   }
+
 
   public DreamInterpretationResponseDTO getDreamInterpretationById(Long interpretationId, Long userId) {
     DreamInterpretation dreamInterpretation = dreamInterpretationRepository.findById(interpretationId)
