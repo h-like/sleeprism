@@ -14,7 +14,7 @@ import java.util.Optional;
 public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
 
   // 기존: public abstract boolean com.example.sleeprism.repository.BookmarkRepository.existByUser_IdAndPost_Id(java.lang.Long,java.lang.Long);
-  // 문제의 메서드: Spring Data JPA 명명 규칙에 맞게 변경
+  // 문제의 메서드: Spring Data JPA 명명 규칙에 맞게 변경 SAVE_MY_WORK
   boolean existsByUser_IdAndPost_Id(Long userId, Long postId); // <-- user 엔티티의 id, post 엔티티의 id를 의미.
 
   // 혹은 다음과 같이 existsBy와 매개변수를 직접 참조하는 방법 (이 방법이 더 가독성 높고 권장됨)
