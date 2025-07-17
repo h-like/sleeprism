@@ -1,42 +1,50 @@
 // src/components/SaleRequestModal.tsx
-import React, { useState } from 'react';
+// import React, 'react';
+import React from 'react';
 import type { SaleRequestCreateRequestDTO } from '../type/Sale';
-// import { SaleRequestCreateRequestDTO } from '../types/sale';
+import '../../public/css/DreamInterpretationModal.css'
 
 interface SaleRequestModalProps {
   postId: number;
   postTitle: string;
-  onClose: () => void; // 모달 닫기 콜백
-  onSuccess: () => void; // 판매 요청 성공 시 콜백 (댓글 새로고침 등)
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
+// SaleRequestCreateRequestDTO 타입이 실제 프로젝트에 정의되어 있다고 가정합니다.
+// 예시를 위해 임시로 정의합니다.
+// interface SaleRequestCreateRequestDTO {
+//   postId: number;
+//   proposedPrice: number;
+// }
+
 function SaleRequestModal({ postId, postTitle, onClose, onSuccess }: SaleRequestModalProps) {
-  const [proposedPrice, setProposedPrice] = useState<number | ''>(''); // 가격 입력 상태
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [proposedPrice, setProposedPrice] = React.useState<number | ''>('');
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
-    if (proposedPrice === '' || proposedPrice < 100) { // 최소 가격 100원 (백엔드 DTO와 일치)
+    if (proposedPrice === '' || proposedPrice < 100) {
       setError('유효한 가격을 입력해주세요 (최소 100원).');
-      setLoading(false);
       return;
     }
+
+    setLoading(true);
 
     const token = localStorage.getItem('jwtToken');
     if (!token) {
       alert('로그인이 필요합니다.');
-      onClose(); // 모달 닫기
-      // navigate('/login'); // 로그인 페이지로 리다이렉트 (필요시)
+      setLoading(false);
+      onClose();
       return;
     }
 
     const requestBody: SaleRequestCreateRequestDTO = {
       postId: postId,
-      proposedPrice: proposedPrice as number, // 타입 단언
+      proposedPrice: proposedPrice as number,
     };
 
     try {
@@ -56,8 +64,8 @@ function SaleRequestModal({ postId, postTitle, onClose, onSuccess }: SaleRequest
       }
 
       alert('판매 요청이 성공적으로 전송되었습니다!');
-      onSuccess(); // 성공 콜백 호출
-      onClose(); // 모달 닫기
+      onSuccess();
+      onClose();
 
     } catch (e: any) {
       console.error('판매 요청 중 오류 발생:', e);
@@ -68,14 +76,36 @@ function SaleRequestModal({ postId, postTitle, onClose, onSuccess }: SaleRequest
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 font-inter">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-300">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-          "{postTitle}" 게시글 구매 제안
+    // 전체 모달 배경: 어둡고 블러 처리된 배경
+    <div className="modal-backdrop">
+      {/* 모달 컨테이너: 흰색 배경, 둥근 모서리, 그림자 효과 */}
+      <div className="modal-container"
+      style={{height: 320}}
+      >
+        
+        
+        {/* 닫기 버튼 */}
+        <button
+          onClick={onClose}
+          className="modal-close-button"
+          aria-label="Close modal"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* 모달 제목 */}
+        <h2 className="modal-title">
+          구매 제안하기
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <p className="content-text">
+          &quot;{postTitle}&quot;
+        </p>
+        
+        <form onSubmit={handleSubmit} className="modal-content-view" >
           <div>
-            <label htmlFor="proposedPrice" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="proposedPrice" className="content-text">
               제안 가격 (원)
             </label>
             <input
@@ -83,30 +113,33 @@ function SaleRequestModal({ postId, postTitle, onClose, onSuccess }: SaleRequest
               id="proposedPrice"
               name="proposedPrice"
               required
-              min="100" // HTML5 유효성 검사
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="제시할 가격을 입력하세요 (최소 100원)"
+              min="100"
+              className="price-input"
+              style={{ width: '50%' }}
+              placeholder="최소 100원 이상 입력"
               value={proposedPrice}
-              onChange={(e) => setProposedPrice(parseInt(e.target.value) || '')}
+              onChange={(e) => setProposedPrice(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
+          {/* 에러 메시지 */}
+          {error && <p className="text-red-500 text-sm text-center font-medium">{error}</p>}
 
-          <div className="flex justify-end space-x-4 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 font-semibold hover:bg-gray-100 transition duration-200"
-            >
-              취소
-            </button>
+          {/* 버튼 그룹 */}
+          <div className="button-group">
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white font-semibold rounded-md shadow-md hover:from-green-600 hover:to-teal-700 transition duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="modal-button primary"
             >
               {loading ? '제안 중...' : '제안하기'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="modal-button secondary" style={{margin: "3"}}
+            >
+              취소
             </button>
           </div>
         </form>

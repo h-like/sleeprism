@@ -12,6 +12,7 @@ public class ChatParticipantResponseDTO {
   private Long id;
   private Long userId;
   private String userNickname;
+  private String profileImageUrl;
   private Long chatRoomId;
   private LocalDateTime joinedAt;
   private boolean isLeft;
@@ -20,6 +21,7 @@ public class ChatParticipantResponseDTO {
     this.id = participant.getId();
     this.userId = participant.getUser().getId();
     this.userNickname = participant.getUser().getNickname();
+    this.profileImageUrl = participant.getUser().getProfileImageUrl();
     this.chatRoomId = participant.getChatRoom().getId();
     this.joinedAt = participant.getJoinedAt();
     this.isLeft = participant.isLeft();

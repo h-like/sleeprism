@@ -1,5 +1,8 @@
 package com.example.sleeprism.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -10,6 +13,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id") // <-- 추가
 @Entity
 @Table(name = "chat_participants")
 @Getter
@@ -23,6 +27,7 @@ public class ChatParticipant extends BaseTimeEntity {
   @Column(name = "chat_participant_id")
   private Long id;
 
+  @JsonBackReference("room-participants")
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "chat_room_id", nullable = false)
   private ChatRoom chatRoom;

@@ -38,3 +38,9 @@ out/
 
 audio-files/
 **/audio-file/
+
+tarot/
+**/tarot/
+/sleeprismBack/src/main/resources/static/images/tarot/
+*.png
+**/images/tarot/*.png

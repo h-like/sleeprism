@@ -81,14 +81,14 @@ const TimerModal: React.FC<TimerModalProps> = ({
                         disabled={remainingTime > 0 || timerMinutes <= 0}
                         className="timer-start-button"
                     >
-                        <Clock size={20} /> <span>시작</span>
+                        <Clock size={20} /> <span>타이머 시작</span>
                     </button>
                     <button
                         onClick={stopTimer}
                         disabled={remainingTime === 0}
                         className="timer-cancel-button"
                     >
-                        <XCircle size={20} /> <span>취소</span>
+                        <XCircle size={20} /> <span>타이머 취소</span>
                     </button>
                 </div>
                 {remainingTime > 0 && (

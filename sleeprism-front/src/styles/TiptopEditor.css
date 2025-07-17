@@ -1,0 +1,240 @@
+/* src/styles/TiptapEditor.css (또는 기존 CSS 파일에 통합) */
+
+.tiptap-wrapper {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.tiptap-wrapper.dark-mode {
+    border-color: #444;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    background-color: #333;
+}
+
+.tiptap-toolbar {
+    display: flex;
+    flex-wrap: wrap; /* 툴바 버튼이 많아지면 줄바꿈되도록 */
+    padding: 8px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f8f8f8;
+    gap: 4px; /* 버튼 사이 간격 */
+}
+
+.tiptap-wrapper.dark-mode .tiptap-toolbar {
+    border-bottom-color: #444;
+    background-color: #444;
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 2px;
+    margin-right: 8px; /* 그룹 사이 간격 */
+    padding-right: 8px;
+    border-right: 1px solid #eee; /* 그룹 구분선 */
+}
+
+.tiptap-wrapper.dark-mode .toolbar-group {
+    border-right-color: #555;
+}
+
+.toolbar-group:last-child {
+    border-right: none;
+    margin-right: 0;
+    padding-right: 0;
+}
+
+.tiptap-button {
+    background: none;
+    border: 1px solid transparent;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #555;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tiptap-wrapper.dark-mode .tiptap-button {
+    color: #bbb;
+}
+
+.tiptap-button:hover:not(:disabled) {
+    background-color: #e9e9e9;
+    border-color: #d0d0d0;
+}
+
+.tiptap-wrapper.dark-mode .tiptap-button:hover:not(:disabled) {
+    background-color: #555;
+    border-color: #666;
+}
+
+.tiptap-button.is-active {
+    background-color: #d0e0ff; /* 활성 상태 배경색 */
+    border-color: #a0c0ff;
+    color: #000;
+}
+
+.tiptap-wrapper.dark-mode .tiptap-button.is-active {
+    background-color: #0056b3; /* 다크 모드 활성 상태 배경색 */
+    border-color: #007bff;
+    color: #fff;
+}
+
+.tiptap-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.tiptap-button.is-loading {
+    cursor: wait;
+}
+
+.tiptap-button .fas {
+    font-size: 1.1em;
+}
+
+.tiptap-color-input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 30px; /* 컬러 피커 크기 조절 */
+    height: 30px;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 4px;
+    overflow: hidden; /* 색상 원 테두리 안 보이게 */
+    margin: 0 5px;
+    border: 1px solid #ccc;
+}
+
+.tiptap-wrapper.dark-mode .tiptap-color-input {
+    border: 1px solid #777;
+}
+
+.tiptap-color-input::-webkit-color-swatch {
+    border-radius: 4px;
+    border: none;
+}
+
+.tiptap-color-input::-moz-color-swatch {
+    border-radius: 4px;
+    border: none;
+}
+
+
+.tiptap-editor-content {
+    flex-grow: 1; /* 에디터 본문이 남은 공간을 차지하도록 */
+    padding: 16px;
+    min-height: 300px; /* 최소 높이 설정 */
+    outline: none; /* 포커스 시 아웃라인 제거 */
+    line-height: 1.6;
+    color: #333; /* 기본 텍스트 색상 */
+    background-color: #fff; /* 기본 배경색 */
+}
+
+.tiptap-wrapper.dark-mode .tiptap-editor-content {
+    color: #e0e0e0;
+    background-color: #222;
+}
+
+/* 에디터 내부의 HTML 요소 스타일 */
+.tiptap-editor-content .ProseMirror {
+    height: 100%; /* 부모에 맞춰 높이 */
+    outline: none; /* 실제 에디터 영역의 포커스 아웃라인 제거 */
+}
+
+.tiptap-editor-content .ProseMirror p.is-empty::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* 이미지 정렬 (TextAlign 확장 기능 필요) */
+.tiptap-editor-content img {
+    max-width: 100%;
+    height: auto;
+    display: block; /* 이미지 자체의 여백 제거 */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Tiptap에서 생성되는 heading, list 등 기본 스타일 */
+.tiptap-editor-content h1 { font-size: 2em; margin-top: 0.67em; margin-bottom: 0.67em; }
+.tiptap-editor-content h2 { font-size: 1.5em; margin-top: 0.83em; margin-bottom: 0.83em; }
+.tiptap-editor-content h3 { font-size: 1.17em; margin-top: 1em; margin-bottom: 1em; }
+
+.tiptap-editor-content ul,
+.tiptap-editor-content ol {
+    margin-left: 20px;
+    padding-left: 0;
+}
+
+.tiptap-editor-content blockquote {
+    border-left: 4px solid #ccc;
+    margin: 1.5em 10px;
+    padding: 0.5em 10px;
+    color: #666;
+}
+
+.tiptap-wrapper.dark-mode .tiptap-editor-content blockquote {
+    border-left-color: #777;
+    color: #aaa;
+}
+
+.tiptap-editor-content code {
+    background-color: rgba(97, 100, 103, 0.1);
+    border-radius: 4px;
+    padding: 0.1em 0.3em;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+
+.tiptap-wrapper.dark-mode .tiptap-editor-content code {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tiptap-editor-content pre {
+    background: #0d0d0d;
+    color: #fff;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.tiptap-editor-content pre code {
+    color: inherit;
+    padding: 0;
+    background: none;
+    font-size: 0.9em;
+}
+
+.tiptap-editor-content hr {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 1em 0;
+}
+
+.tiptap-wrapper.dark-mode .tiptap-editor-content hr {
+    border-top-color: #777;
+}
+
+/* 링크 스타일 */
+.tiptap-editor-content a {
+    color: #007bff;
+    text-decoration: underline;
+}
+
+.tiptap-wrapper.dark-mode .tiptap-editor-content a {
+    color: #8ab4f8; /* 밝은 파랑 */
+}

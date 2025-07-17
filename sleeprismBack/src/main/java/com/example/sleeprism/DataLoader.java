@@ -14,6 +14,6 @@ public class DataLoader {
 
   @EventListener(ApplicationReadyEvent.class)
   public void loadData() {
-    dreamInterpretationService.initializeTarotCards();
+//    dreamInterpretationService.initializeTarotCards();
   }
 }

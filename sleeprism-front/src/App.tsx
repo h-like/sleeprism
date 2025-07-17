@@ -1,22 +1,22 @@
 // src/App.js 또는 src/index.js (메인 엔트리 파일)
 import React, { useState } from 'react'; // useState import
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, BrowserRouter } from 'react-router-dom';
 import PostListPage from './pages/PostListPage';
 import PostDetailPage from './pages/PostDetailPage';
 import RegisterPage from './pages/RegisterPage';
 import PostCreatePage from './pages/PostCreatePage';
 import LoginPage from './pages/LoginPage';
-import LandingPage from './pages/LandingPage';
 import NotFoundPage from './pages/NotFoundPage';
 
-import ChatRoomList from './components/ChatRoomList';
-import ChatWindow from './components/ChatWindow';
-import CreateGroupChatRoomPage from './pages/CreateGroupChatRoomPage';
-import ChatBlockedUsersPage from './pages/ChatBlockedUsersPage';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Header from './components/Header';
 import MyPage from './components/MyPage';
 import SoundMixer from './components/SoundMixer';
+import PostEditPage from './pages/PostEditPage';
+import DirectChatPage from './pages/DirectChatPage';
+import ChatPage from './pages/ChatPage';
+import LandingPage from './pages/LandingPage';
+
 
 
 
@@ -30,27 +30,34 @@ function App() {
   };
 
   return (
-    <Router>
-      <ThemeProvider>
-         <Header />
-      <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/posts" element={<PostListPage />} />
-      <Route path="/posts/:postId" element={<PostDetailPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/posts/new" element={<PostCreatePage />} />
-      <Route path="/chat" element={<ChatRoomList />} />
-      <Route path="/chat/:chatRoomId" element={<ChatWindow />} />
-      <Route path="/chat/create-group" element={<CreateGroupChatRoomPage />} />
-      <Route path="/chat/blocked-users" element={<ChatBlockedUsersPage />} />
-      <Route path="/myPage" element={<MyPage />} />
-      <Route path="*" element={<NotFoundPage />} />
-       <Route path="/sound-mixer" element={<SoundMixer />} />
+     <Router>
+            <ThemeProvider>
+                <Header /> {/* 모든 페이지에 공통으로 보이는 헤더 */}
+                <Routes>
+                    {/* 랜딩 페이지 라우트 */}
 
-      </Routes>
-      </ThemeProvider>
-    </Router>
+                    {/* <Route path="/" element={<HomePage />} /> */}
+                    <Route path="/" element={<LandingPage />} />
+
+                    {/* 기존의 다른 페이지 라우트들 */}
+                    <Route path="/posts" element={<PostListPage />} />
+                    <Route path="/posts/:postId" element={<PostDetailPage />} />
+                    <Route path="/posts/:postId/edit" element={<PostEditPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/posts/new" element={<PostCreatePage />} />
+                    <Route path="/chat/:chatRoomId" element={<DirectChatPage />} />
+                    <Route path="/chat" element={<ChatPage />} />
+                    {/* <Route path="/myPage" element={<MyPage />} /> */}
+                    <Route path="/myPage/*" element={<MyPage />} />
+                    <Route path="/sound-mixer" element={<SoundMixer />} />
+
+
+                    {/* Not Found 페이지는 항상 맨 마지막에 위치해야 합니다. */}
+                    <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+            </ThemeProvider>
+        </Router>
   );
 }
 

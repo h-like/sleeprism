@@ -1,5 +1,8 @@
 package com.example.sleeprism.entity;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -11,6 +14,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id") // <-- 추가
 @Entity
 @Table(name = "chat_rooms")
 @Getter
@@ -40,10 +44,12 @@ public class ChatRoom extends BaseTimeEntity {
   @Builder.Default
   private boolean isDeleted = false; // 채팅방 삭제 여부 (소프트 삭제)
 
+  @JsonManagedReference("room-participants")
   @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   private List<ChatParticipant> participants = new ArrayList<>(); // 채팅방 참가자 목록
 
+  @JsonManagedReference("room-messages")
   @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   private List<ChatMessage> messages = new ArrayList<>(); // 채팅방 메시지 목록

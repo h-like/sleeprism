@@ -1,13 +1,7 @@
 package com.example.sleeprism.service;
 
 import com.example.sleeprism.dto.ChatMessageResponseDTO;
-import com.example.sleeprism.entity.ChatBlock;
-import com.example.sleeprism.entity.ChatMessage;
-import com.example.sleeprism.entity.ChatParticipant;
-import com.example.sleeprism.entity.ChatRoom;
-import com.example.sleeprism.entity.NotificationType;
-import com.example.sleeprism.entity.User;
-import com.example.sleeprism.repository.ChatBlockRepository;
+import com.example.sleeprism.entity.*;
 import com.example.sleeprism.repository.ChatMessageRepository;
 import com.example.sleeprism.repository.ChatParticipantRepository;
 import com.example.sleeprism.repository.ChatRoomRepository;
@@ -15,25 +9,23 @@ import com.example.sleeprism.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 @Slf4j
 public class ChatMessageService {
 
   private final ChatMessageRepository chatMessageRepository;
   private final ChatRoomRepository chatRoomRepository;
-  private final UserRepository userRepository;
   private final ChatParticipantRepository chatParticipantRepository;
-  private final ChatBlockRepository chatBlockRepository; // 차단 기능 추가
+  private final UserRepository userRepository;
+  // private final ChatBlockRepository chatBlockRepository; // 차단 기능 (필요시 주석 해제)
   private final NotificationService notificationService; // 알림 서비스 주입
 
   /**
@@ -46,65 +38,73 @@ public class ChatMessageService {
    * @return 저장된 메시지의 응답 DTO
    */
   @Transactional
-  public ChatMessageResponseDTO saveChatMessage(Long chatRoomId, Long senderId, String content) {
-    ChatRoom chatRoom = chatRoomRepository.findByIdAndIsDeletedFalse(chatRoomId)
-        .orElseThrow(() -> new EntityNotFoundException("Chat room not found or deleted with ID: " + chatRoomId));
+  public ChatMessageResponseDTO saveChatMessage(Long chatRoomId, Long senderId, String content, MessageType messageType) {
+    log.info("Saving message. RoomId: {}, SenderId: {}, Type: {}, Content: '{}'", chatRoomId, senderId, messageType, content);
+
+    // 1. 채팅방 유효성 검사
+    ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+        .orElseThrow(() -> {
+          log.error("ChatMessageService: ChatRoom not found with ID: {}", chatRoomId);
+          return new EntityNotFoundException("채팅방을 찾을 수 없습니다.");
+        });
+    log.info("ChatMessageService: ChatRoom found: {}", chatRoom.getName());
+
+    // 2. 발신자 User 엔티티 조회
     User sender = userRepository.findById(senderId)
-        .orElseThrow(() -> new EntityNotFoundException("Sender user not found with ID: " + senderId));
+        .orElseThrow(() -> {
+          log.error("ChatMessageService: Sender User not found with ID: {}", senderId);
+          return new EntityNotFoundException("발신자 사용자를 찾을 수 없습니다.");
+        });
+    log.info("ChatMessageService: Sender User found: {}", sender.getNickname());
 
-    // 발신자가 채팅방의 활성 참가자인지 확인
-    chatParticipantRepository.findByChatRoomAndUserAndIsLeft(chatRoom, sender, false)
-        .orElseThrow(() -> new IllegalArgumentException("메시지를 보낼 수 있는 채팅방 참가자가 아닙니다."));
 
-    // 1:1 채팅방의 경우, 차단 여부 확인
-    if (chatRoom.getType() == com.example.sleeprism.entity.ChatRoomType.SINGLE) {
-      List<ChatParticipant> participants = chatParticipantRepository.findByChatRoomAndIsLeft(chatRoom, false);
-      if (participants.size() == 2) { // 1:1 채팅방임을 다시 확인
-        User recipient = participants.stream()
-            .filter(p -> !p.getUser().getId().equals(senderId))
-            .map(ChatParticipant::getUser)
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("1:1 채팅방에서 상대방을 찾을 수 없습니다."));
-
-        // 발신자가 수신자를 차단했는지 또는 수신자가 발신자를 차단했는지 확인
-        if (chatBlockRepository.findByBlockerAndBlocked(sender, recipient).isPresent() ||
-            chatBlockRepository.findByBlockerAndBlocked(recipient, sender).isPresent()) {
-          throw new IllegalArgumentException("채팅이 차단된 사용자에게 메시지를 보낼 수 없습니다.");
-        }
-      }
-    }
-
+    // 3. 메시지 엔티티 생성 (sender 필드에 User 객체 직접 할당)
     ChatMessage chatMessage = ChatMessage.builder()
         .chatRoom(chatRoom)
-        .sender(sender)
+        .sender(sender) // <-- sender User 객체 할당
         .content(content)
+        .messageType(messageType)
+        .isRead(false)
         .build();
+    log.info("ChatMessageService: ChatMessage entity created. Sender User ID: {}", chatMessage.getSender().getId());
 
+    // 4. 메시지 저장
     ChatMessage savedMessage = chatMessageRepository.save(chatMessage);
-    log.info("Chat message saved for chat room {}: {}", chatRoomId, content);
+    log.info("ChatMessageService: ChatMessage saved with ID: {}", savedMessage.getId());
 
-    // --- 알림 생성 로직 (백그라운드에서 처리) ---
-    // 메시지를 받은 모든 활성 참가자에게 알림 생성
-    List<ChatParticipant> activeParticipants = chatParticipantRepository.findByChatRoomAndIsLeft(chatRoom, false);
+    // 5. 채팅방 참여자들의 마지막 읽은 메시지 ID 업데이트 및 알림 전송
+    List<ChatParticipant> activeParticipants = chatParticipantRepository.findByChatRoomAndIsLeft(chatRoom, false); // 활성 참여자만
+    log.info("ChatMessageService: Found {} active participants for chat room {}", activeParticipants.size(), chatRoomId);
+
     for (ChatParticipant participant : activeParticipants) {
-      if (!participant.getUser().getId().equals(senderId)) { // 메시지 보낸 사람 제외
-        String message = String.format("'%s'님이 새 메시지를 보냈습니다: '%s'",
+      if (participant.getUser().getId().equals(senderId)) { // 메시지 보낸 사람
+        participant.updateLastReadMessageId(savedMessage.getId()); // 편의 메서드 사용
+        log.info("ChatMessageService: User {} (sender) last read message ID updated to {}", participant.getUser().getId(), savedMessage.getId());
+      } else { // 메시지 받은 사람
+        String notificationMessage = String.format("'%s'님이 새 메시지를 보냈습니다: '%s'",
             sender.getNickname(), savedMessage.getContent().substring(0, Math.min(savedMessage.getContent().length(), 50)) + "...");
-        String redirectPath = String.format("/chatrooms/%d", chatRoom.getId()); // 채팅방으로 이동하는 경로
+        String redirectPath = String.format("/chatrooms/%d", chatRoom.getId());
 
-        // 차단된 사용자에게는 알림을 보내지 않음
-        if (chatBlockRepository.findByBlockerAndBlocked(participant.getUser(), sender).isEmpty()) { // 수신자가 발신자를 차단하지 않았다면
-          notificationService.createNotification(participant.getUser(), NotificationType.CHAT_MESSAGE, message,
-              "ChatRoom", chatRoom.getId(), redirectPath);
-          log.info("CHAT_MESSAGE notification sent to user {} for ChatRoom ID: {}", participant.getUser().getId(), chatRoom.getId());
-        } else {
-          log.info("CHAT_MESSAGE notification not sent to blocked user {} from sender {}.", participant.getUser().getId(), senderId);
-        }
+        // (선택 사항) 차단된 사용자에게는 알림을 보내지 않음 (필요시 주석 해제)
+        // if (chatBlockRepository.findByBlockerAndBlocked(participant.getUser(), sender).isEmpty()) {
+        notificationService.createNotification(
+            participant.getUser(),
+            NotificationType.CHAT_MESSAGE, // NotificationType enum 사용
+            notificationMessage,
+            "ChatRoom", // targetEntityType
+            chatRoom.getId(), // targetEntityId
+            redirectPath
+        );
+        log.info("ChatMessageService: CHAT_MESSAGE notification sent to user {} for ChatRoom ID: {}", participant.getUser().getId(), chatRoomId);
+        // } else {
+        //     log.info("ChatMessageService: CHAT_MESSAGE notification not sent to blocked user {} from sender {}.", participant.getUser().getId(), senderId);
+        // }
       }
+      chatParticipantRepository.save(participant); // 변경사항 저장
     }
-    // --- 알림 생성 로직 끝 ---
 
-    return new ChatMessageResponseDTO(savedMessage);
+    // 6. 응답 DTO 생성
+    return new ChatMessageResponseDTO(savedMessage); // ChatMessageResponseDTO 생성자에 savedMessage 전달
   }
 
   /**
@@ -116,9 +116,10 @@ public class ChatMessageService {
    * @param size 페이지당 메시지 수
    * @return 메시지 목록 DTO
    */
+  @Transactional(readOnly = true)
   public List<ChatMessageResponseDTO> getChatHistory(Long chatRoomId, Long userId, int page, int size) {
-    ChatRoom chatRoom = chatRoomRepository.findByIdAndIsDeletedFalse(chatRoomId)
-        .orElseThrow(() -> new EntityNotFoundException("Chat room not found or deleted with ID: " + chatRoomId));
+    ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+        .orElseThrow(() -> new EntityNotFoundException("Chat room not found with ID: " + chatRoomId));
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
 
@@ -126,12 +127,9 @@ public class ChatMessageService {
     chatParticipantRepository.findByChatRoomAndUserAndIsLeft(chatRoom, user, false)
         .orElseThrow(() -> new IllegalArgumentException("회원님은 이 채팅방의 참가자가 아닙니다."));
 
-    Pageable pageable = PageRequest.of(page, size);
-    List<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderByCreatedAtDesc(chatRoom, pageable);
+    List<ChatMessage> messages = chatMessageRepository.findByChatRoomOrderByCreatedAtDesc(chatRoom);
 
     // 메시지 읽음 처리 (선택 사항: 사용자가 메시지 내역을 조회하면 해당 방의 모든 메시지를 읽음 처리)
-    // 이 로직은 UI에서 특정 메시지를 읽었을 때만 호출되도록 하거나, 별도의 API로 분리하는 것이 더 적절할 수 있습니다.
-    // 여기서는 간단히 조회 시점에 최신 메시지를 읽은 것으로 처리합니다.
     chatParticipantRepository.findByChatRoomAndUser(chatRoom, user)
         .ifPresent(p -> {
           if (!messages.isEmpty()) {
@@ -140,7 +138,6 @@ public class ChatMessageService {
             log.info("User {} last read message ID updated to {} for chat room {}", userId, messages.get(0).getId(), chatRoomId);
           }
         });
-
 
     return messages.stream()
         .map(ChatMessageResponseDTO::new)

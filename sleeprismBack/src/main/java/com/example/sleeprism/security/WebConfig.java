@@ -12,18 +12,6 @@ import java.nio.file.Paths;
 @Configuration // 이 클래스를 Spring 설정 빈으로 만듭니다.
 public class WebConfig implements WebMvcConfigurer { // WebMvcConfigurer 인터페이스 구현 확인
 
-  @Override
-  public void addCorsMappings(CorsRegistry registry) {
-    // 모든 경로에 대해 CORS 적용 (가장 포괄적)
-    // allowedOrigins에 정확한 프론트엔드 오리진(들)을 명시합니다.
-    // * (모든 오리진)을 사용하지 않습니다.
-    registry.addMapping("/**") // <-- 모든 경로에 CORS를 적용합니다. Context Path는 여기서 고려할 필요 없습니다.
-        .allowedOrigins("http://localhost:5173", "http://127.0.0.1:5173") // 프론트엔드 오리진 명확히 지정
-        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // 모든 관련 메서드 포함
-        .allowedHeaders("*") // 모든 헤더 허용
-        .allowCredentials(true) // 중요: 자격 증명(쿠키, 인증 헤더 등) 허용
-        .maxAge(3600);
-  }
 
   @Value("${file.upload-dir}")
   private String uploadDir;

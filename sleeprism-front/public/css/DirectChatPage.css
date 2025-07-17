@@ -1,0 +1,176 @@
+/* DirectChatPage.css */
+/* 전체적인 폰트와 배경 설정 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* =================================
+   CSS 변수 (테마 관리용)
+==================================== */
+:root {
+    --bg-color: #f8f9fa;
+    --header-bg-color: rgba(255, 255, 255, 0.8);
+    --border-color: #e9ecef;
+    --text-primary: #212529;
+    --text-secondary: #495057;
+    --text-tertiary: #adb5bd;
+    --hover-item-bg: #f1f3f5;
+    --chat-window-bg: linear-gradient(175deg, #fdfcff 0%, #f3f4ff 100%);
+    --my-message-bg: linear-gradient(to right, #6D5BBA, #8D58C8);
+    --other-message-bg: #ffffff;
+    --input-area-bg: #ffffff;
+    --input-field-bg: #ffffff;
+    --input-field-border: #dee2e6;
+    --accent-color: #7950f2;
+    --accent-hover-color: #6c46e3;
+    --focus-shadow: rgba(132, 94, 247, 0.2);
+    --disabled-bg: #ced4da;
+}
+
+.dark {
+    --bg-color: #1a1a1a;
+    --header-bg-color: rgba(26, 26, 26, 0.8);
+    --border-color: #2c2c2c;
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b3b8;
+    --text-tertiary: #8a8a8a;
+    --hover-item-bg: #252525;
+    --chat-window-bg: linear-gradient(175deg, #1c1c1e 0%, #1e1f2b 100%);
+    --my-message-bg: linear-gradient(to right, #6D5BBA, #8D58C8);
+    --other-message-bg: #333333;
+    --input-area-bg: #1a1a1a;
+    --input-field-bg: #2c2c2c;
+    --input-field-border: #3a3a3a;
+    --accent-color: #845ef7;
+    --accent-hover-color: #9775fa;
+    --focus-shadow: rgba(132, 94, 247, 0.3);
+    --disabled-bg: #4e4f50;
+}
+
+/* =================================
+   컴포넌트 스타일
+==================================== */
+
+.chat-page-container {
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    transition: background-color 0.3s ease;
+}
+
+/* 헤더 스타일 */
+.chat-header {
+    background-color: var(--header-bg-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.back-button {
+    padding: 0.5rem;
+    border-radius: 9999px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-right: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.back-button:hover {
+    background-color: var(--hover-item-bg);
+}
+
+.room-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex-grow: 1;
+}
+
+/* 채팅창 스타일 */
+.chat-window {
+    flex-grow: 1;
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+    background: var(--chat-window-bg);
+}
+
+/* 메시지 컨테이너 (정렬용) */
+.message-container { display: flex; margin-bottom: 1rem; max-width: 75%; }
+.message-container.my-message { justify-content: flex-end; margin-left: auto; }
+.message-container.other-message { justify-content: flex-start; margin-right: auto; }
+
+/* 메시지 요소 그룹 (닉네임, 말풍선, 시간) */
+.message-item { display: flex; flex-direction: column; }
+.message-nickname { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+.my-message .message-nickname { text-align: right; }
+
+/* 메시지 말풍선 스타일 */
+.message-bubble {
+    padding: 0.75rem 1rem;
+    border-radius: 1.25rem;
+    line-height: 1.5;
+    word-break: break-word;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+}
+.my-message .message-bubble { background: var(--my-message-bg); color: white; border-bottom-right-radius: 0.5rem; }
+.other-message .message-bubble { background-color: var(--other-message-bg); border-bottom-left-radius: 0.5rem; }
+
+.chat-image { max-width: 250px; border-radius: 1rem; cursor: pointer; }
+
+.message-time { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.3rem; }
+.my-message .message-time { text-align: right; }
+
+/* 메시지 입력창 스타일 */
+.message-input-area {
+    background-color: var(--input-area-bg);
+    border-top: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.message-input-form { display: flex; align-items: center; gap: 0.5rem; }
+
+.message-input-field {
+    flex-grow: 1;
+    border: 1px solid var(--input-field-border);
+    background-color: var(--input-field-bg);
+    color: var(--text-primary);
+    border-radius: 2rem;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.message-input-field:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 2px var(--focus-shadow); }
+.message-input-field:disabled { background-color: var(--hover-item-bg); cursor: not-allowed; }
+
+/* 버튼 스타일 */
+.chat-action-button, .send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: none;
+    background-color: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+.chat-action-button:hover { background-color: var(--hover-item-bg); color: var(--text-primary); }
+
+.send-button { background-color: var(--accent-color); color: white; }
+.send-button:hover { background-color: var(--accent-hover-color); }
+.send-button:disabled { background-color: var(--disabled-bg); cursor: not-allowed; }

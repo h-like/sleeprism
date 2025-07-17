@@ -1,5 +1,8 @@
 package com.example.sleeprism.entity;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder; // Lombok @Builder 임포트
@@ -18,6 +21,7 @@ import java.util.Collection;
 import java.util.Collections; // Collections 임포트
 import java.util.List; // List 임포트 추가
 
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id") // <-- 추가
 @Entity
 @Table(name = "users")
 @Getter
@@ -68,21 +72,25 @@ public class User extends BaseTimeEntity implements UserDetails { // <-- BaseTim
 
   // --- 관계 매핑 (Post, Comment, SaleRequest 등과 User 간의 관계) ---
   // User가 작성한 게시글 목록
+  @JsonIgnore
   @OneToMany(mappedBy = "originalAuthor", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default // @Builder 사용 시 초기화 표현식 무시 경고 방지
   private List<Post> posts = new ArrayList<>();
 
   // User가 현재 소유한 게시글 목록 (판매를 통해 소유권이 바뀐 경우)
+  @JsonIgnore
   @OneToMany(mappedBy = "currentOwner", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default // @Builder 사용 시 초기화 표현식 무시 경고 방지
   private List<Post> ownedPosts = new ArrayList<>(); // SaleService의 getOwnedPosts()를 위해 추가
 
   // User가 작성한 댓글 목록
+  @JsonIgnore
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default // @Builder 사용 시 초기화 표현식 무시 경고 방지
   private List<Comment> comments = new ArrayList<>();
 
   // User가 참여한 채팅방 목록
+  @JsonIgnore
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   private List<ChatParticipant> chatParticipants = new ArrayList<>();
